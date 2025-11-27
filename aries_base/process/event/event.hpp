@@ -71,14 +71,14 @@ class Event {
   uint32_t GetId(std::string_view name) const;
 
   // Multi-state Numeric-based API (fast path - use for performance-critical code)
-  bool AddId(uint32_t id, bool manual_reset = false, bool initial_state = false);
-  bool RemoveId(uint32_t id);
-  bool HasId(uint32_t id);
+  bool AddId(uint32_t state_id, bool manual_reset = false, bool initial_state = false);
+  bool RemoveId(uint32_t state_id);
+  bool HasId(uint32_t state_id);
   // Signal event by ID
-  bool SetId(uint32_t id);
+  bool SetId(uint32_t state_id);
   // Reset event state by ID
-  bool ResetId(uint32_t id);
-  bool WaitId(uint32_t id, int64_t timeout_ms = -1);
+  bool ResetId(uint32_t state_id);
+  bool WaitId(uint32_t state_id, int64_t timeout_ms = -1);
   uint32_t WaitAnyId(int64_t timeout_ms = -1);
 
   // Multi-state wait all
@@ -86,10 +86,10 @@ class Event {
 
  private:
   // String name interning - one-time conversion to numeric ID
-  uint32_t InternName(std::string_view name);
+  uint32_t InternName(std::string_view state_name);
 
   // Index management for bitset storage
-  uint32_t IndexOf(uint32_t id) const;
+  uint32_t IndexOf(uint32_t state_id) const;
   void EnsureCapacityForIndex(uint32_t index);
 
   // Bitset helper functions (unsafe - caller must hold lock)

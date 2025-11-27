@@ -257,17 +257,17 @@ const std::string Event::WaitAnyName(int64_t wait_time) {
 }
 // -----------------------------------------------------------------------------
 
-uint32_t Event::GetId(std::string_view name) const {
-  std::string key(name);
+uint32_t Event::GetId(std::string_view state_name) const {
+  std::string key(state_name);
   auto it = name_to_id_.find(key);
   return (it != name_to_id_.end()) ? it->second : INVALID_ID;
 }
 // -----------------------------------------------------------------------------
 
-bool Event::AddId(uint32_t id, bool manual_reset, bool initial_state) {
+bool Event::AddId(uint32_t state_id, bool manual_reset, bool initial_state) {
   std::unique_lock<std::mutex> lock(lock_);
 
-  if (id_to_index_.find(id) != id_to_index_.end()) {
+  if (id_to_index_.find(state_id) != id_to_index_.end()) {
     return false; // Already exists
   }
 
@@ -279,7 +279,7 @@ bool Event::AddId(uint32_t id, bool manual_reset, bool initial_state) {
   }
 
   uint32_t index = next_index_++;
-  id_to_index_[id] = index;
+  id_to_index_[state_id] = index;
 
   // Ensure capacity
   EnsureCapacityForIndex(index);
@@ -295,10 +295,10 @@ bool Event::AddId(uint32_t id, bool manual_reset, bool initial_state) {
 }
 // -----------------------------------------------------------------------------
 
-bool Event::RemoveId(uint32_t id) {
+bool Event::RemoveId(uint32_t state_id) {
   std::unique_lock<std::mutex> lock(lock_);
 
-  auto it = id_to_index_.find(id);
+  auto it = id_to_index_.find(state_id);
   if (it == id_to_index_.end()) {
     return false;
   }
@@ -310,16 +310,16 @@ bool Event::RemoveId(uint32_t id) {
 }
 // -----------------------------------------------------------------------------
 
-bool Event::HasId(uint32_t id) {
+bool Event::HasId(uint32_t state_id) {
   std::unique_lock<std::mutex> lock(lock_);
-  return id_to_index_.find(id) != id_to_index_.end();
+  return id_to_index_.find(state_id) != id_to_index_.end();
 }
 // -----------------------------------------------------------------------------
 
-bool Event::SetId(uint32_t id) {
+bool Event::SetId(uint32_t state_id) {
   std::unique_lock<std::mutex> lock(lock_);
 
-  uint32_t index = IndexOf(id);
+  uint32_t index = IndexOf(state_id);
   if (index == INVALID_ID) {
     return false;
   }
@@ -331,10 +331,10 @@ bool Event::SetId(uint32_t id) {
 }
 // -----------------------------------------------------------------------------
 
-bool Event::ResetId(uint32_t id) {
+bool Event::ResetId(uint32_t state_id) {
   std::unique_lock<std::mutex> lock(lock_);
 
-  uint32_t index = IndexOf(id);
+  uint32_t index = IndexOf(state_id);
   if (index == INVALID_ID) {
     return false;
   }
@@ -345,10 +345,10 @@ bool Event::ResetId(uint32_t id) {
 }
 // -----------------------------------------------------------------------------
 
-bool Event::WaitId(uint32_t id, int64_t timeout_ms) {
+bool Event::WaitId(uint32_t state_id, int64_t timeout_ms) {
   std::unique_lock<std::mutex> lock(lock_);
 
-  uint32_t index = IndexOf(id);
+  uint32_t index = IndexOf(state_id);
   if (index == INVALID_ID) {
     return false;
   }
@@ -435,20 +435,20 @@ bool Event::WaitAll(int64_t timeout_ms) {
 }
 // -----------------------------------------------------------------------------
 
-uint32_t Event::InternName(std::string_view name) {
-  std::string key(name);
+uint32_t Event::InternName(std::string_view state_name) {
+  std::string key(state_name);
   auto it = name_to_id_.find(key);
   if (it != name_to_id_.end()) {
     return it->second;
   }
-  uint32_t id = next_id_++;
-  name_to_id_[key] = id;
-  return id;
+  uint32_t state_id = next_id_++;
+  name_to_id_[key] = state_id;
+  return state_id;
 }
 // -----------------------------------------------------------------------------
 
-uint32_t Event::IndexOf(uint32_t id) const {
-  auto it = id_to_index_.find(id);
+uint32_t Event::IndexOf(uint32_t state_id) const {
+  auto it = id_to_index_.find(state_id);
   return (it != id_to_index_.end()) ? it->second : INVALID_ID;
 }
 // -----------------------------------------------------------------------------
