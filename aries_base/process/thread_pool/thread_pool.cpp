@@ -29,20 +29,17 @@ using namespace std::chrono;
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
-const uint32_t ThreadPool::TASK_CANCEL_EVENT = 1000;
-const uint32_t ThreadPool::TASK_FAIL_EVENT = 1001;
-const uint32_t ThreadPool::TASK_PASS_EVENT = 1002;
-// -----------------------------------------------------------------------------
 ThreadPool* ThreadPool::instance_ = nullptr;
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
 
-ThreadPool::ThreadPool(uint16_t idle_count, uint16_t max_count) {
-  idle_thread_count_ = 0;
-  max_idle_thread_ = idle_count;
-  thread_count_ = 0;
-  max_thread_ = max_count;
+ThreadPool::ThreadPool(uint16_t idle_count, uint16_t max_count)
+    : exception_handling_(false),
+      idle_thread_count_(0),
+      max_idle_thread_(idle_count),
+      thread_count_(0),
+      max_thread_(max_count) {
   events_.AddId(ThreadPoolEvent::kStageChange, false, false);
   events_.AddId(ThreadPoolEvent::kShutdown, false, false);
   worker_thread_ = std::thread(&ThreadPool::Worker, this);
@@ -101,16 +98,93 @@ void ThreadPool::AdjustResources(uint16_t idle_count, uint16_t max_count) {
 }
 // -----------------------------------------------------------------------------
 
+void ThreadPool::SetExceptionHandling(bool enable) {
+  Instance()->SetExceptionHandlingImp(enable);
+}
+// -----------------------------------------------------------------------------
+
+void ThreadPool::SetExceptionHandlingImp(bool enable) {
+  exception_handling_ = enable;
+}
+// -----------------------------------------------------------------------------
+
 void ThreadPool::PostTask(std::function<void()> task_func,
-                          Event* task_end_event) {
-  return Instance()->PostTaskImp(task_func, task_end_event);
+                          Event* task_end_events) {
+  return Instance()->PostTaskImp(task_func, task_end_events);
+}
+// -----------------------------------------------------------------------------
+
+void ThreadPool::PostTaskImp(std::function<void()> task_func,
+                             Event* task_end_events) {
+  std::unique_lock<std::recursive_mutex> auto_unlock(lock_);
+
+  // no free worker, post as delayed task with 0 wait time
+  if (free_list_.empty()) {
+    // create pending task
+    PendingTask* pending_task = new PendingTask();
+    pending_task->task_func_0 = task_func;
+    pending_task->task_func_1 = nullptr;
+    pending_task->task_param = nullptr;
+    pending_task->exception_handling = exception_handling_;
+    pending_task->task_end_events = task_end_events;
+    // append to pending list
+    pending_tasks_.Append(pending_task);
+    return;
+  }
+
+  // get free worker
+  ThreadWorker* worker = free_list_.head()->value();
+  worker->RemoveFromList();
+  idle_thread_count_--;
+  // move to busy list
+  busy_list_.Append(worker);
+  // start task
+  worker->Start(task_func, exception_handling_, task_end_events);
+
+  if (free_list_.empty()) {
+    AllocateWorker();
+  }
 }
 // -----------------------------------------------------------------------------
 
 void ThreadPool::PostTask(std::function<void(void*)> task_func,
                           void* task_param,
-                          Event* task_end_event) {
-  return Instance()->PostTaskImp(task_func, task_param, task_end_event);
+                          Event* task_end_events) {
+  return Instance()->PostTaskImp(task_func, task_param, task_end_events);
+}
+// -----------------------------------------------------------------------------
+
+void ThreadPool::PostTaskImp(std::function<void(void*)> task_func,
+                             void* task_param,
+                             Event* task_end_events) {
+  std::unique_lock<std::recursive_mutex> auto_unlock(lock_);
+
+  // no free worker, post as delayed task with 0 wait time
+  if (free_list_.empty()) {
+    // create pending task
+    PendingTask* pending_task = new PendingTask();
+    pending_task->task_func_0 = nullptr;
+    pending_task->task_func_1 = task_func;
+    pending_task->task_param = task_param;
+    pending_task->exception_handling = exception_handling_;
+    pending_task->task_end_events = task_end_events;
+    // append to pending list
+    pending_tasks_.Append(pending_task);
+    return;
+  }
+
+  // get free worker
+  ThreadWorker* worker = free_list_.head()->value();
+  worker->RemoveFromList();
+  idle_thread_count_--;
+  // move to busy list
+  busy_list_.Append(worker);
+  // start task
+  worker->Start(task_func, task_param, exception_handling_, task_end_events);
+
+  if (free_list_.empty()) {
+    AllocateWorker();
+  }
 }
 // -----------------------------------------------------------------------------
 
@@ -120,6 +194,23 @@ void ThreadPool::PostDelayedTask(std::function<void()> task_func,
   return Instance()->PostDelayedTaskImp(task_func,
                                         wait_time,
                                         task_end_events);
+}
+// -----------------------------------------------------------------------------
+
+void ThreadPool::PostDelayedTaskImp(std::function<void()> task_func,
+                                    int64_t wait_time,
+                                    Event* task_end_events) {
+  std::unique_lock<std::recursive_mutex> auto_unlock(lock_);
+
+  DelayedTask* delayed_task = new DelayedTask();
+  delayed_task->task_func_0 = task_func;
+  delayed_task->task_func_1 = nullptr;
+  delayed_task->task_param = nullptr;
+  delayed_task->executing_time = steady_clock::now() + milliseconds(wait_time);
+  delayed_task->exception_handling = exception_handling_;
+  delayed_task->task_end_events = task_end_events;
+
+  delayed_tasks_.Append(delayed_task);
 }
 // -----------------------------------------------------------------------------
 
@@ -134,8 +225,34 @@ void ThreadPool::PostDelayedTask(std::function<void(void*)> task_func,
 }
 // -----------------------------------------------------------------------------
 
+void ThreadPool::PostDelayedTaskImp(std::function<void(void*)> task_func,
+                                    void* task_param,
+                                    int64_t wait_time,
+                                    Event* task_end_events) {
+  std::unique_lock<std::recursive_mutex> auto_unlock(lock_);
+
+  DelayedTask* delayed_task = new DelayedTask();
+  delayed_task->task_func_0 = nullptr;
+  delayed_task->task_func_1 = task_func;
+  delayed_task->task_param = task_param;
+  delayed_task->executing_time = steady_clock::now() + milliseconds(wait_time);
+  delayed_task->exception_handling = exception_handling_;
+  delayed_task->task_end_events = task_end_events;
+
+  delayed_tasks_.Append(delayed_task);
+}
+// -----------------------------------------------------------------------------
+
+void ThreadPool::PostTask(std::function<void()> task_func,
+                          bool exception_handling,
+                          Event* task_end_events) {
+  return Instance()->PostTaskImp(task_func, exception_handling, task_end_events);
+}
+// -----------------------------------------------------------------------------
+
 void ThreadPool::PostTaskImp(std::function<void()> task_func,
-                             Event* task_end_event) {
+                             bool exception_handling,
+                             Event* task_end_events) {
   std::unique_lock<std::recursive_mutex> auto_unlock(lock_);
 
   // no free worker, post as delayed task with 0 wait time
@@ -145,7 +262,8 @@ void ThreadPool::PostTaskImp(std::function<void()> task_func,
     pending_task->task_func_0 = task_func;
     pending_task->task_func_1 = nullptr;
     pending_task->task_param = nullptr;
-    pending_task->task_end_event = task_end_event;
+    pending_task->exception_handling = exception_handling;
+    pending_task->task_end_events = task_end_events;
     // append to pending list
     pending_tasks_.Append(pending_task);
     return;
@@ -158,7 +276,7 @@ void ThreadPool::PostTaskImp(std::function<void()> task_func,
   // move to busy list
   busy_list_.Append(worker);
   // start task
-  worker->Start(task_func, task_end_event);
+  worker->Start(task_func, exception_handling, task_end_events);
 
   if (free_list_.empty()) {
     AllocateWorker();
@@ -166,9 +284,21 @@ void ThreadPool::PostTaskImp(std::function<void()> task_func,
 }
 // -----------------------------------------------------------------------------
 
+void ThreadPool::PostTask(std::function<void(void*)> task_func,
+                          void* task_param,
+                          bool exception_handling,
+                          Event* task_end_events) {
+  return Instance()->PostTaskImp(task_func,
+                                task_param,
+                                exception_handling,
+                                task_end_events);
+}
+// -----------------------------------------------------------------------------
+
 void ThreadPool::PostTaskImp(std::function<void(void*)> task_func,
                              void* task_param,
-                             Event* task_end_event) {
+                             bool exception_handling,
+                             Event* task_end_events) {
   std::unique_lock<std::recursive_mutex> auto_unlock(lock_);
 
   // no free worker, post as delayed task with 0 wait time
@@ -178,7 +308,8 @@ void ThreadPool::PostTaskImp(std::function<void(void*)> task_func,
     pending_task->task_func_0 = nullptr;
     pending_task->task_func_1 = task_func;
     pending_task->task_param = task_param;
-    pending_task->task_end_event = task_end_event;
+    pending_task->exception_handling = exception_handling;
+    pending_task->task_end_events = task_end_events;
     // append to pending list
     pending_tasks_.Append(pending_task);
     return;
@@ -191,7 +322,7 @@ void ThreadPool::PostTaskImp(std::function<void(void*)> task_func,
   // move to busy list
   busy_list_.Append(worker);
   // start task
-  worker->Start(task_func, task_param, task_end_event);
+  worker->Start(task_func, task_param, exception_handling, task_end_events);
 
   if (free_list_.empty()) {
     AllocateWorker();
@@ -199,15 +330,21 @@ void ThreadPool::PostTaskImp(std::function<void(void*)> task_func,
 }
 // -----------------------------------------------------------------------------
 
+void ThreadPool::PostDelayedTask(std::function<void()> task_func,
+                                 int64_t wait_time,
+                                 bool exception_handling,
+                                 Event* task_end_events) {
+  return Instance()->PostDelayedTaskImp(task_func,
+                                        wait_time,
+                                        exception_handling,
+                                        task_end_events);
+}
+// -----------------------------------------------------------------------------
+
 void ThreadPool::PostDelayedTaskImp(std::function<void()> task_func,
                                     int64_t wait_time,
+                                    bool exception_handling,
                                     Event* task_end_events) {
-  if (task_end_events) {
-    task_end_events->AddId(TASK_CANCEL_EVENT, false, false);
-    task_end_events->AddId(TASK_FAIL_EVENT, false, false);
-    task_end_events->AddId(TASK_PASS_EVENT, false, false);
-  }
-
   std::unique_lock<std::recursive_mutex> auto_unlock(lock_);
 
   DelayedTask* delayed_task = new DelayedTask();
@@ -215,22 +352,31 @@ void ThreadPool::PostDelayedTaskImp(std::function<void()> task_func,
   delayed_task->task_func_1 = nullptr;
   delayed_task->task_param = nullptr;
   delayed_task->executing_time = steady_clock::now() + milliseconds(wait_time);
+  delayed_task->exception_handling = exception_handling;
   delayed_task->task_end_events = task_end_events;
 
   delayed_tasks_.Append(delayed_task);
 }
 // -----------------------------------------------------------------------------
 
+void ThreadPool::PostDelayedTask(std::function<void(void*)> task_func,
+                                 void* task_param,
+                                 int64_t wait_time,
+                                 bool exception_handling,
+                                 Event* task_end_events) {
+  return Instance()->PostDelayedTaskImp(task_func,
+                                        task_param,
+                                        wait_time,
+                                        exception_handling,
+                                        task_end_events);
+}
+// -----------------------------------------------------------------------------
+
 void ThreadPool::PostDelayedTaskImp(std::function<void(void*)> task_func,
                                     void* task_param,
                                     int64_t wait_time,
+                                    bool exception_handling,
                                     Event* task_end_events) {
-  if (task_end_events) {
-    task_end_events->AddId(TASK_CANCEL_EVENT, false, false);
-    task_end_events->AddId(TASK_FAIL_EVENT, false, false);
-    task_end_events->AddId(TASK_PASS_EVENT, false, false);
-  }
-
   std::unique_lock<std::recursive_mutex> auto_unlock(lock_);
 
   DelayedTask* delayed_task = new DelayedTask();
@@ -238,6 +384,7 @@ void ThreadPool::PostDelayedTaskImp(std::function<void(void*)> task_func,
   delayed_task->task_func_1 = task_func;
   delayed_task->task_param = task_param;
   delayed_task->executing_time = steady_clock::now() + milliseconds(wait_time);
+  delayed_task->exception_handling = exception_handling;
   delayed_task->task_end_events = task_end_events;
 
   delayed_tasks_.Append(delayed_task);
@@ -321,12 +468,15 @@ void ThreadPool::Worker() {
         busy_list_.Append(worker);
         // start task
         if (task->task_func_0) {
-          worker->Start(task->task_func_0, task->task_end_event);
+          worker->Start(task->task_func_0,
+                        task->exception_handling,
+                        task->task_end_events);
         }
         else if (task->task_func_1) {
           worker->Start(task->task_func_1,
                         task->task_param,
-                        task->task_end_event);
+                        task->exception_handling,
+                        task->task_end_events);
         }
 
         // remove node
@@ -348,8 +498,9 @@ void ThreadPool::Worker() {
 
         // if task is cancelled
         if (task->task_end_events != nullptr &&
-            task->task_end_events->WaitId(TASK_CANCEL_EVENT, 1)) {
-          task->task_end_events->SetId(TASK_FAIL_EVENT);
+            task->task_end_events->HasId(TaskResultEvent::kCancel) &&
+            task->task_end_events->WaitId(TaskResultEvent::kCancel, 1)) {
+          task->task_end_events->SetId(TaskResultEvent::kCancelled);
           // remove node
           LinkNode<DelayedTask>* delete_node = node;
           node = node->next();
@@ -357,16 +508,15 @@ void ThreadPool::Worker() {
         }
         else if ((task->executing_time < now) ||
                  ((task->executing_time - now) > hours(24))) {
-          // post task
-          task->task_end_events->RemoveId(TASK_CANCEL_EVENT);
-          task->task_end_events->RemoveId(TASK_FAIL_EVENT);
-
           if (task->task_func_0) {
-            PostTaskImp(task->task_func_0, task->task_end_events);
+            PostTaskImp(task->task_func_0,
+                        task->exception_handling,
+                        task->task_end_events);
           }
           else if (task->task_func_1) {
             PostTaskImp(task->task_func_1,
                         task->task_param,
+                        task->exception_handling,
                         task->task_end_events);
           }
 

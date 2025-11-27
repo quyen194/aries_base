@@ -40,7 +40,8 @@ struct PendingTask : LinkNode<PendingTask> {
   std::function<void()> task_func_0;
   std::function<void(void*)> task_func_1;
   void* task_param;
-  Event *task_end_event;
+  bool exception_handling;
+  Event *task_end_events;
 };
 // -----------------------------------------------------------------------------
 

@@ -56,9 +56,12 @@ class ThreadWorker : public LinkNode<ThreadWorker> {
  private:
   ThreadWorker(Event &thread_pool_events);  // for ThreadPool
 
-  void Start(std::function<void()> task_func, Event* task_end_event);
+  void Start(std::function<void()> task_func,
+             bool exception_handling,
+             Event* task_end_event);
   void Start(std::function<void(void*)> task_func,
              void* task_param,
+             bool exception_handling,
              Event* task_end_event);
   bool IsRunning();
 
@@ -79,6 +82,7 @@ class ThreadWorker : public LinkNode<ThreadWorker> {
   std::function<void()> task_func_0_;
   std::function<void(void*)> task_func_1_;
   void* task_param_;
+  bool exception_handling_;
   Event *task_end_event_;
 
  private:

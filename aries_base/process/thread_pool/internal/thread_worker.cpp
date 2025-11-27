@@ -37,6 +37,7 @@ ThreadWorker::ThreadWorker(Event &thread_pool_events)
       task_func_0_(nullptr),
       task_func_1_(nullptr),
       task_param_(nullptr),
+      exception_handling_(false),
       task_end_event_(nullptr) {
   events_.AddId(ThreadPoolEvent::kTaskStart, false, false);
   events_.AddId(ThreadPoolEvent::kShutdown, false, false);
@@ -51,6 +52,7 @@ ThreadWorker::~ThreadWorker() {
 // -----------------------------------------------------------------------------
 
 void ThreadWorker::Start(std::function<void()> task_func,
+                         bool exception_handling,
                          Event* task_end_event) {
   std::unique_lock<std::recursive_mutex> auto_unlock(lock_);
 
@@ -58,6 +60,7 @@ void ThreadWorker::Start(std::function<void()> task_func,
     task_func_0_ = task_func;
     task_func_1_ = nullptr;
     task_param_ = nullptr;
+    exception_handling_ = exception_handling;
     task_end_event_ = task_end_event;
     events_.SetId(ThreadPoolEvent::kTaskStart);
   }
@@ -66,6 +69,7 @@ void ThreadWorker::Start(std::function<void()> task_func,
 
 void ThreadWorker::Start(std::function<void(void*)> task_func,
                          void* task_param,
+                         bool exception_handling,
                          Event* task_end_event) {
   std::unique_lock<std::recursive_mutex> auto_unlock(lock_);
 
@@ -73,6 +77,7 @@ void ThreadWorker::Start(std::function<void(void*)> task_func,
     task_func_0_ = nullptr;
     task_func_1_ = task_func;
     task_param_ = task_param;
+    exception_handling_ = exception_handling;
     task_end_event_ = task_end_event;
     events_.SetId(ThreadPoolEvent::kTaskStart);
   }
@@ -111,6 +116,7 @@ void ThreadWorker::ClearTask() {
   task_func_0_ = nullptr;
   task_func_1_ = nullptr;
   task_param_ = nullptr;
+  exception_handling_ = false;
   task_end_event_ = nullptr;
 }
 // -----------------------------------------------------------------------------
@@ -125,16 +131,56 @@ void ThreadWorker::Worker() {
     if (event == ThreadPoolEvent::kTaskStart) {
       if (IsRunning()) {
         // execute task
-        if (task_func_0_) {
-          task_func_0_();
-        }
-        else if (task_func_1_) {
-          task_func_1_(task_param_);
-        }
+        if (exception_handling_) {
+          // run with exception handling
+          try {
+            if (task_func_0_) {
+              task_func_0_();
+            }
+            else if (task_func_1_) {
+              task_func_1_(task_param_);
+            }
 
-        // notify that task is executed
-        if (task_end_event_) {
-          task_end_event_->Set();
+            if (task_end_event_) {
+              // notify that task is executed
+              if (task_end_event_->HasId(TaskResultEvent::kPass)) {
+                task_end_event_->SetId(TaskResultEvent::kPass);
+              }
+              else {
+                task_end_event_->Set();
+              }
+            }
+          }
+          catch (...) {
+            // notify that task is executed
+            if (task_end_event_) {
+              if (task_end_event_->HasId(TaskResultEvent::kFail)) {
+                task_end_event_->SetId(TaskResultEvent::kFail);
+              }
+              else {
+                task_end_event_->Set();
+              }
+            }
+          }
+        }
+        else {
+          // run without exception handling
+          if (task_func_0_) {
+            task_func_0_();
+          }
+          else if (task_func_1_) {
+            task_func_1_(task_param_);
+          }
+
+          if (task_end_event_) {
+            // notify that task is executed
+            if (task_end_event_->HasId(TaskResultEvent::kPass)) {
+              task_end_event_->SetId(TaskResultEvent::kPass);
+            }
+            else {
+              task_end_event_->Set();
+            }
+          }
         }
 
         ClearTask();
