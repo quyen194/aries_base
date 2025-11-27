@@ -38,9 +38,9 @@ ThreadWorker::ThreadWorker(Event &thread_pool_events)
       task_func_1_(nullptr),
       task_param_(nullptr),
       task_end_event_(nullptr) {
-  events_.Add(TASK_START_EVENT, false, false);
-  events_.Add(SHUTDOWN_EVENT, false, false);
-  events_.Add(WORKER_END_EVENT, false, false);
+  events_.AddId(ThreadPoolEvent::kTaskStart, false, false);
+  events_.AddId(ThreadPoolEvent::kShutdown, false, false);
+  events_.AddId(ThreadPoolEvent::kWorkerEnd, false, false);
   worker_thread_ = std::thread(&ThreadWorker::Worker, this);
 }
 // -----------------------------------------------------------------------------
@@ -59,7 +59,7 @@ void ThreadWorker::Start(std::function<void()> task_func,
     task_func_1_ = nullptr;
     task_param_ = nullptr;
     task_end_event_ = task_end_event;
-    events_.Set(TASK_START_EVENT);
+    events_.SetId(ThreadPoolEvent::kTaskStart);
   }
 }
 // -----------------------------------------------------------------------------
@@ -74,7 +74,7 @@ void ThreadWorker::Start(std::function<void(void*)> task_func,
     task_func_1_ = task_func;
     task_param_ = task_param;
     task_end_event_ = task_end_event;
-    events_.Set(TASK_START_EVENT);
+    events_.SetId(ThreadPoolEvent::kTaskStart);
   }
 }
 // -----------------------------------------------------------------------------
@@ -94,14 +94,14 @@ bool ThreadWorker::IsWorking() {
 void ThreadWorker::Shutdown(int64_t wait_time) {
   if (IsWorking()) {
     steady_clock::time_point start_time = steady_clock::now();
-    events_.Set(SHUTDOWN_EVENT);
+    events_.SetId(ThreadPoolEvent::kShutdown);
 
     if (wait_time < 0) {
       worker_thread_.join();
       return;
     }
     else {
-      events_.Wait(WORKER_END_EVENT, wait_time);
+      events_.WaitId(ThreadPoolEvent::kWorkerEnd, wait_time);
     }
   }
 }
@@ -119,10 +119,10 @@ void ThreadWorker::Worker() {
   std::string event;
 
   while (true) {
-    std::string event = events_.WaitAny();
+    uint32_t event = events_.WaitAnyId();
 
     // do task
-    if (event == TASK_START_EVENT) {
+    if (event == ThreadPoolEvent::kTaskStart) {
       if (IsRunning()) {
         // execute task
         if (task_func_0_) {
@@ -140,16 +140,16 @@ void ThreadWorker::Worker() {
         ClearTask();
 
         // notify thread pool this worker is free now
-        thread_pool_events_.Set(STAGE_CHANGE_EVENT);
+        thread_pool_events_.SetId(ThreadPoolEvent::kStageChange);
       }
     }
-    else if (event == SHUTDOWN_EVENT) {
+    else if (event == ThreadPoolEvent::kShutdown) {
       // need shutdown
       break;
     }
   }
 
-  events_.Set(WORKER_END_EVENT);
+  events_.SetId(ThreadPoolEvent::kWorkerEnd);
 }
 // -----------------------------------------------------------------------------
 
