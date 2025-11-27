@@ -34,15 +34,15 @@ int main() {
   // post delayed task 200 ms
   ThreadPool::PostDelayedTask([](){ std::cout << "delayed run" << std::endl; }, 200, &ev);
 
-  std::string event_name = ev.WaitAny(1000);
+  uint32_t event_id = ev.WaitAnyId(1000);
 
-  if (event_name.empty()) {
+  if (event_id == Event::INVALID_ID) {
     std::cerr << "delayed task timeout" << std::endl;
     ThreadPool::DestroyInstance();
     return 1;
   }
 
-  std::cout << "event triggered: " << event_name << std::endl;
+  std::cout << "event triggered: " << event_id << std::endl;
 
   ThreadPool::DestroyInstance();
   std::cout << "delayed ok" << std::endl;
