@@ -11,6 +11,7 @@ set_property(GLOBAL PROPERTY ALL_TEST_TARGETS "")
 
 # Include all test subdirectories
 add_subdirectory(process/event)
+add_subdirectory(process/ipc/mpmc_bounded_queue)
 add_subdirectory(process/thread_pool)
 
 # Retrieve the list of all test targets
