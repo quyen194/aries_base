@@ -13,6 +13,8 @@
 
 
 // -----------------------------------------------------------------------------
+#include <chrono>
+
 #include "aries_base/process/thread_pool/internal/definitions.hpp"
 #include "aries_base/process/thread_pool/thread_pool.hpp"
 // -----------------------------------------------------------------------------
@@ -117,7 +119,7 @@ void ThreadPool::PostTask(std::function<void(void*)> task_func,
 // -----------------------------------------------------------------------------
 
 void ThreadPool::PostDelayedTask(std::function<void()> task_func,
-                                 uint64_t wait_time,
+                                 int64_t wait_time,
                                  Event* task_end_events) {
   return Instance()->PostDelayedTaskImp(task_func,
                                         wait_time,
@@ -127,7 +129,7 @@ void ThreadPool::PostDelayedTask(std::function<void()> task_func,
 
 void ThreadPool::PostDelayedTask(std::function<void(void*)> task_func,
                                  void* task_param,
-                                 uint64_t wait_time,
+                                 int64_t wait_time,
                                  Event* task_end_events) {
   return Instance()->PostDelayedTaskImp(task_func,
                                         task_param,
@@ -140,10 +142,26 @@ void ThreadPool::PostTaskImp(std::function<void()> task_func,
                              Event* task_end_event) {
   std::unique_lock<std::recursive_mutex> auto_unlock(lock_);
 
+  // no free worker, post as delayed task with 0 wait time
+  if (free_list_.empty()) {
+    // create pending task
+    PendingTask* pending_task = new PendingTask();
+    pending_task->task_func_0 = task_func;
+    pending_task->task_func_1 = nullptr;
+    pending_task->task_param = nullptr;
+    pending_task->task_end_event = task_end_event;
+    // append to pending list
+    pending_tasks_.Append(pending_task);
+    return;
+  }
+
+  // get free worker
   ThreadWorker* worker = free_list_.head()->value();
   worker->RemoveFromList();
   idle_thread_count_--;
+  // move to busy list
   busy_list_.Append(worker);
+  // start task
   worker->Start(task_func, task_end_event);
 
   if (free_list_.empty()) {
@@ -157,10 +175,26 @@ void ThreadPool::PostTaskImp(std::function<void(void*)> task_func,
                              Event* task_end_event) {
   std::unique_lock<std::recursive_mutex> auto_unlock(lock_);
 
+  // no free worker, post as delayed task with 0 wait time
+  if (free_list_.empty()) {
+    // create pending task
+    PendingTask* pending_task = new PendingTask();
+    pending_task->task_func_0 = nullptr;
+    pending_task->task_func_1 = task_func;
+    pending_task->task_param = task_param;
+    pending_task->task_end_event = task_end_event;
+    // append to pending list
+    pending_tasks_.Append(pending_task);
+    return;
+  }
+
+  // get free worker
   ThreadWorker* worker = free_list_.head()->value();
   worker->RemoveFromList();
   idle_thread_count_--;
+  // move to busy list
   busy_list_.Append(worker);
+  // start task
   worker->Start(task_func, task_param, task_end_event);
 
   if (free_list_.empty()) {
@@ -170,7 +204,7 @@ void ThreadPool::PostTaskImp(std::function<void(void*)> task_func,
 // -----------------------------------------------------------------------------
 
 void ThreadPool::PostDelayedTaskImp(std::function<void()> task_func,
-                                    uint64_t wait_time,
+                                    int64_t wait_time,
                                     Event* task_end_events) {
   if (task_end_events) {
     task_end_events->Add(TASK_CANCEL_EVENT, false, false);
@@ -193,7 +227,7 @@ void ThreadPool::PostDelayedTaskImp(std::function<void()> task_func,
 
 void ThreadPool::PostDelayedTaskImp(std::function<void(void*)> task_func,
                                     void* task_param,
-                                    uint64_t wait_time,
+                                    int64_t wait_time,
                                     Event* task_end_events) {
   if (task_end_events) {
     task_end_events->Add(TASK_CANCEL_EVENT, false, false);
@@ -264,14 +298,45 @@ void ThreadPool::Worker() {
           worker->RemoveFromList();
           free_list_.Append(worker);
           idle_thread_count_++;
-          // nếu idle thread quá nhiều thì free bớt
+          // if idle thread exceed max, mark for free check
           check_for_free = true;
         }
       }
 
-      // nếu idle thread quá nhiều thì free bớt
+      // if idle thread exceed max, free some
       if (check_for_free) {
         DeAllocateWorker();
+      }
+    }
+
+    // check for pending tasks
+    {
+      std::unique_lock<std::recursive_mutex> auto_unlock(lock_);
+
+      LinkNode<PendingTask>* node = pending_tasks_.head();
+      while (node != pending_tasks_.end_list() && !free_list_.empty()) {
+        PendingTask* task = node->value();
+
+        // get free worker
+        ThreadWorker* worker = free_list_.head()->value();
+        worker->RemoveFromList();
+        idle_thread_count_--;
+        // move to busy list
+        busy_list_.Append(worker);
+        // start task
+        if (task->task_func_0) {
+          worker->Start(task->task_func_0, task->task_end_event);
+        }
+        else if (task->task_func_1) {
+          worker->Start(task->task_func_1,
+                        task->task_param,
+                        task->task_end_event);
+        }
+
+        // remove node
+        LinkNode<PendingTask>* delete_node = node;
+        node = node->previous();
+        delete_node->Free();
       }
     }
 
@@ -307,6 +372,7 @@ void ThreadPool::Worker() {
                           task->task_param,
                           task->task_end_events);
             }
+
             // remove node
             LinkNode<DelayedTask>* delete_node = node;
             node = node->previous();

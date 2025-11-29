@@ -5,28 +5,25 @@
   author:    quyen19492
   email:     quyen19492@gmail.com
 
-  created:   2025/11/16 15:32
-  filename:  aries_base/process/event/event.hpp
+  created:   2025/11/16 22:37
+  filename:  aries_base/process/thread_pool/internal/pending_task.hpp
 
   purpose:
 *********************************************************************/
 
 
+// -----------------------------------------------------------------------------
+#ifndef ARIES_BASE_PROCESS_THREAD_POOL_INTERNAL_PENDING_TASK_HPP
+#define ARIES_BASE_PROCESS_THREAD_POOL_INTERNAL_PENDING_TASK_HPP
+// -----------------------------------------------------------------------------
+
 
 // -----------------------------------------------------------------------------
-#ifndef ARIES_BASE_PROCESS_EVENT_EVENT_HPP
-#define ARIES_BASE_PROCESS_EVENT_EVENT_HPP
-// -----------------------------------------------------------------------------
-
-
-// -----------------------------------------------------------------------------
-#include <condition_variable>
 #include <chrono>
-#include <cstdint>
-#include <limits>
-#include <map>
-#include <mutex>
-#include <string>
+#include <functional>
+
+#include "aries_base/container/linked_list.hpp"
+#include "aries_base/process/event/event.hpp"
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
@@ -38,49 +35,31 @@ namespace process {
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
-using namespace std::chrono;
+namespace thread_pool {
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
 
-class Event {
- public:
-  Event(bool manual_reset = false, bool initial_state = false);
-  virtual ~Event();
-
-  bool Add(const std::string &state_name, bool manual_reset = false, bool initial_state = false);
-  void Remove(const std::string &state_name);
-  bool Has(const std::string &state_name);
-
-  // single state
-  bool Set();
-  bool Reset();
-  bool Wait(int64_t wait_time = -1);
-
-  // multi state
-  bool Set(const std::string &state_name);
-  bool Reset(const std::string &state_name);
-  bool Wait(const std::string &state_name, int64_t wait_time = -1);
-  const std::string WaitAny(int64_t wait_time = -1);
-  bool WaitAll(int64_t wait_time = -1);
-
- private:
-  bool is_single_state_;
-  std::mutex lock_;
-  std::condition_variable condition_;
-  std::map<std::string, bool> states_;
-  std::map<std::string, bool> manual_resets_;
+struct PendingTask : LinkNode<PendingTask> {
+  std::function<void()> task_func_0;
+  std::function<void(void*)> task_func_1;
+  void* task_param;
+  Event *task_end_event;
 };
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
-} // namespace process
+}  // namespace thread_pool
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
-} // namespace aries_base
+}  // namespace process
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
-#endif  // ARIES_BASE_PROCESS_EVENT_EVENT_HPP
+}  // namespace aries_base
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+#endif  // ARIES_BASE_PROCESS_THREAD_POOL_INTERNAL_PENDING_TASK_HPP
 // -----------------------------------------------------------------------------

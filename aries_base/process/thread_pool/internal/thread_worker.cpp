@@ -44,6 +44,7 @@ ThreadWorker::ThreadWorker(Event &thread_pool_events)
       task_end_event_(nullptr) {
   events_.Add(TASK_START_EVENT, false, false);
   events_.Add(SHUTDOWN_EVENT, false, false);
+  events_.Add(WORKER_END_EVENT, false, false);
   worker_thread_ = std::thread(&ThreadWorker::Worker, this);
 }
 // -----------------------------------------------------------------------------
@@ -94,17 +95,18 @@ bool ThreadWorker::IsWorking() {
 }
 // -----------------------------------------------------------------------------
 
-void ThreadWorker::Shutdown(uint64_t wait_time) {
+void ThreadWorker::Shutdown(int64_t wait_time) {
   if (IsWorking()) {
     steady_clock::time_point start_time = steady_clock::now();
     events_.Set(SHUTDOWN_EVENT);
 
-    do {
-      if (!IsWorking()) {
-        break;
-      }
-      std::this_thread::sleep_for(milliseconds(1));
-    } while (steady_clock::now() - start_time < milliseconds(wait_time));
+    if (wait_time < 0) {
+      worker_thread_.join();
+      return;
+    }
+    else {
+      events_.Wait(WORKER_END_EVENT, wait_time);
+    }
   }
 }
 // -----------------------------------------------------------------------------
@@ -150,6 +152,8 @@ void ThreadWorker::Worker() {
       break;
     }
   }
+
+  events_.Set(WORKER_END_EVENT);
 }
 // -----------------------------------------------------------------------------
 

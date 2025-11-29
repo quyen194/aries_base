@@ -86,7 +86,6 @@ bool Event::Set() {
     return Set(SINGLE_EVENT_NAME);
   }
   else {
-    std::unique_lock<std::mutex> auto_unlock(lock_);
     if (states_.size() == 1) {
       std::string event_name = states_.begin()->first;
       return Set(event_name);
@@ -101,7 +100,6 @@ bool Event::Reset() {
     return Reset(SINGLE_EVENT_NAME);
   }
   else {
-    std::unique_lock<std::mutex> auto_unlock(lock_);
     if (states_.size() == 1) {
       std::string event_name = states_.begin()->first;
       return Reset(event_name);
@@ -111,12 +109,11 @@ bool Event::Reset() {
 }
 // -----------------------------------------------------------------------------
 
-bool Event::Wait(uint64_t wait_time) {
+bool Event::Wait(int64_t wait_time) {
   if (is_single_state_) {
     return Wait(SINGLE_EVENT_NAME, wait_time);
   }
   else {
-    std::unique_lock<std::mutex> auto_unlock(lock_);
     if (states_.size() == 1) {
       std::string event_name = states_.begin()->first;
       return Wait(event_name, wait_time);
@@ -151,7 +148,7 @@ bool Event::Reset(const std::string &state_name) {
 }
 // -----------------------------------------------------------------------------
 
-bool Event::Wait(const std::string &state_name, uint64_t wait_time) {
+bool Event::Wait(const std::string &state_name, int64_t wait_time) {
   std::unique_lock<std::mutex> auto_unlock(lock_);
 
   // check state exists
@@ -178,7 +175,7 @@ bool Event::Wait(const std::string &state_name, uint64_t wait_time) {
 }
 // -----------------------------------------------------------------------------
 
-const std::string Event::WaitAny(uint64_t wait_time) {
+const std::string Event::WaitAny(int64_t wait_time) {
   std::unique_lock<std::mutex> auto_unlock(lock_);
 
   // wait for any state to be set
@@ -211,7 +208,7 @@ const std::string Event::WaitAny(uint64_t wait_time) {
 }
 // -----------------------------------------------------------------------------
 
-bool Event::WaitAll(uint64_t wait_time) {
+bool Event::WaitAll(int64_t wait_time) {
   std::unique_lock<std::mutex> auto_unlock(lock_);
 
   // wait for all states to be set

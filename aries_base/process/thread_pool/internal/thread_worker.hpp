@@ -67,7 +67,7 @@ class ThreadWorker : public LinkNode<ThreadWorker> {
   bool IsRunning();
 
   bool IsWorking();
-  void Shutdown(uint64_t wait_time = std::numeric_limits<uint64_t>::max());
+  void Shutdown(int64_t wait_time = -1);
 
  private:
   void ClearTask();
@@ -86,7 +86,7 @@ class ThreadWorker : public LinkNode<ThreadWorker> {
   Event *task_end_event_;
 
  private:
-  friend class ThreadPool;
+  friend class process::ThreadPool;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(ThreadWorker);
