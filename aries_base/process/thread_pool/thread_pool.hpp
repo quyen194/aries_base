@@ -18,6 +18,10 @@
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
+#include <cstdint>
+#include <functional>
+#include <mutex>
+#include <thread>
 #include <vector>
 
 #include "aries_base/definitions/macro.hpp"
@@ -25,6 +29,7 @@
 #include "aries_base/container/linked_list.hpp"
 #include "aries_base/process/event/event.hpp"
 #include "aries_base/process/thread_pool/internal/delay_task.hpp"
+#include "aries_base/process/thread_pool/internal/pending_task.hpp"
 #include "aries_base/process/thread_pool/internal/thread_worker.hpp"
 // -----------------------------------------------------------------------------
 
@@ -50,17 +55,17 @@ class ThreadPool {
   static void DestroyInstance();
   static void AdjustResource(uint16_t idle_count, uint16_t max_count);
 
-  static void PostTask(std::function<void()> task_func, Event* task_end_event);
+  static void PostTask(std::function<void()> task_func, Event* task_end_event = nullptr);
   static void PostTask(std::function<void(void*)> task_func,
                        void* task_param,
-                       Event* task_end_event);
+                       Event* task_end_event = nullptr);
   static void PostDelayedTask(std::function<void()> task_func,
-                              uint64_t wait_time,
-                              Event* task_end_events);
+                              int64_t wait_time = -1,
+                              Event* task_end_events = nullptr);
   static void PostDelayedTask(std::function<void(void*)> task_func,
                               void* task_param,
-                              uint64_t wait_time,
-                              Event* task_end_events);
+                              int64_t wait_time = -1,
+                              Event* task_end_events = nullptr);
 
  public:
   static const std::string TASK_CANCEL_EVENT;  // cancel task from out side
@@ -68,17 +73,16 @@ class ThreadPool {
   static const std::string TASK_FAIL_EVENT;    // task end before excuted (be cancelled)
 
  private:
-  void PostTaskImp(std::function<void()> task_func, Event* task_end_events);
+  void PostTaskImp(std::function<void()> task_func, Event* task_end_events = nullptr);
   void PostTaskImp(std::function<void(void*)> task_func, void* task_param,
-                   Event* task_end_events);
+                   Event* task_end_events = nullptr);
   void PostDelayedTaskImp(std::function<void()> task_func,
-                          uint64_t wait_time,
-                          Event* task_end_events);
+                          int64_t wait_time = -1,
+                          Event* task_end_events = nullptr);
   void PostDelayedTaskImp(std::function<void(void*)> task_func,
                           void* task_param,
-                          uint64_t wait_time,
-                          Event* task_end_events);
-
+                          int64_t wait_time = -1,
+                          Event* task_end_events = nullptr);
   void AllocateWorker();
   void DeAllocateWorker();
   void Worker();
@@ -91,6 +95,7 @@ class ThreadPool {
   LinkedList<ThreadWorker> free_list_;
   LinkedList<ThreadWorker> busy_list_;
   LinkedList<DelayedTask> delayed_tasks_;
+  LinkedList<PendingTask> pending_tasks_;
   Event events_;
   std::recursive_mutex lock_;
   std::thread worker_thread_;

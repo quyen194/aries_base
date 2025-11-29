@@ -34,6 +34,10 @@ namespace process {
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
+using namespace std::chrono;
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
 
 class Event {
  public:
@@ -47,14 +51,14 @@ class Event {
   // single state
   bool Set();
   bool Reset();
-  bool Wait(uint64_t wait_time = std::numeric_limits<uint64_t>::max());
+  bool Wait(int64_t wait_time = -1);
 
   // multi state
   bool Set(const std::string &state_name);
   bool Reset(const std::string &state_name);
-  bool Wait(const std::string &state_name, uint64_t wait_time = std::numeric_limits<uint64_t>::max());
-  const std::string WaitAny(uint64_t wait_time = std::numeric_limits<uint64_t>::max());
-  bool WaitAll(uint64_t wait_time = std::numeric_limits<uint64_t>::max());
+  bool Wait(const std::string &state_name, int64_t wait_time = -1);
+  const std::string WaitAny(int64_t wait_time = -1);
+  bool WaitAll(int64_t wait_time = -1);
 
  private:
   bool is_single_state_;

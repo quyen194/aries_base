@@ -30,6 +30,7 @@ namespace thread_pool {
 #define STAGE_CHANGE_EVENT "stage_change_event"
 #define TASK_START_EVENT "task_start_event"
 #define SHUTDOWN_EVENT "shutdown_event"
+#define WORKER_END_EVENT "worker_end_event"
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
