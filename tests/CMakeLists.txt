@@ -10,6 +10,7 @@ message(STATUS "Build all aries_base tests:")
 set_property(GLOBAL PROPERTY ALL_TEST_TARGETS "")
 
 # Include all test subdirectories
+add_subdirectory(process/event)
 add_subdirectory(process/thread_pool)
 
 # Retrieve the list of all test targets
