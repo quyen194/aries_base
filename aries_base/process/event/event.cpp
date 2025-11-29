@@ -8,11 +8,16 @@
   created:   2025/11/16 16:23
   filename:  aries_base/process/event/event.cpp
 
-  purpose:
+  purpose:   Event implementation using numeric IDs and bitset-backed
+             storage for performance. Interns string names to uint32_t
+             IDs on first use.
 *********************************************************************/
 
 
 // -----------------------------------------------------------------------------
+#include <algorithm>
+#include <cstring>
+
 #include "aries_base/process/event/event.hpp"
 // -----------------------------------------------------------------------------
 
@@ -31,209 +36,524 @@ using namespace std::chrono;
 
 // -----------------------------------------------------------------------------
 #define SINGLE_EVENT_NAME "single"
+#define SINGLE_EVENT_ID 0
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+const uint32_t Event::INVALID_ID = UINT32_MAX;
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
 
-Event::Event(bool manual_reset, bool initial_state) {
-  // initialize single state
-  states_[SINGLE_EVENT_NAME] = initial_state;
-  manual_resets_[SINGLE_EVENT_NAME] = manual_reset;
-  is_single_state_ = true;
+Event::Event(bool manual_reset, bool initial_state)
+  : is_single_state_(true),
+    next_id_(SINGLE_EVENT_ID + 1),
+    next_index_(0),
+    bits_(nullptr),
+    bits_capacity_(0) {
+  // Intern single state name and allocate its bit
+  name_to_id_[SINGLE_EVENT_NAME] = SINGLE_EVENT_ID;
+  id_to_index_[SINGLE_EVENT_ID] = next_index_;
+  next_index_++;
+
+  // Allocate first bitset word
+  bits_capacity_ = 1;
+  bits_ = new std::atomic<uint64_t>[bits_capacity_];
+  bits_[0].store(initial_state ? 1ULL : 0ULL, std::memory_order_relaxed);
+  manual_resets_.push_back(manual_reset);
 }
 // -----------------------------------------------------------------------------
 
-Event::~Event() {}
-// -----------------------------------------------------------------------------
-
-bool Event::Add(const std::string &state_name, bool manual_reset, bool initial_state) {
-  std::unique_lock<std::mutex> auto_unlock(lock_);
-
-  if (states_.find(state_name) != states_.end()) {
-    return false;
+Event::~Event() {
+  if (bits_) {
+    delete[] bits_;
   }
-
-  // if adding first state, switch to multi-state mode
-  if (is_single_state_) {
-    is_single_state_ = false;
-    states_.clear();
-    manual_resets_.clear();
-  }
-
-  // add state
-  states_[state_name] = initial_state;
-  manual_resets_[state_name] = manual_reset;
-
-  return true;
-}
-// -----------------------------------------------------------------------------
-
-void Event::Remove(const std::string &state_name) {
-  std::unique_lock<std::mutex> auto_unlock(lock_);
-  states_.erase(state_name);
-  manual_resets_.erase(state_name);
-}
-// -----------------------------------------------------------------------------
-
-bool Event::Has(const std::string& state_name) {
-  std::unique_lock<std::mutex> auto_unlock(lock_);
-  return states_.find(state_name) != states_.end();
 }
 // -----------------------------------------------------------------------------
 
 bool Event::Set() {
   if (is_single_state_) {
-    return Set(SINGLE_EVENT_NAME);
+    return SetId(SINGLE_EVENT_ID);
   }
-  else {
-    if (states_.size() == 1) {
-      std::string event_name = states_.begin()->first;
-      return Set(event_name);
-    }
-    return false;
+  else if (id_to_index_.size() == 1) {
+    return SetId(id_to_index_.begin()->first);
   }
+  return false;
 }
 // -----------------------------------------------------------------------------
 
 bool Event::Reset() {
   if (is_single_state_) {
-    return Reset(SINGLE_EVENT_NAME);
+    return ResetId(SINGLE_EVENT_ID);
   }
-  else {
-    if (states_.size() == 1) {
-      std::string event_name = states_.begin()->first;
-      return Reset(event_name);
-    }
-    return false;
+  else if (id_to_index_.size() == 1) {
+    return ResetId(id_to_index_.begin()->first);
   }
+  return false;
 }
 // -----------------------------------------------------------------------------
 
 bool Event::Wait(int64_t wait_time) {
   if (is_single_state_) {
-    return Wait(SINGLE_EVENT_NAME, wait_time);
+    return WaitId(SINGLE_EVENT_ID, wait_time);
   }
-  else {
-    if (states_.size() == 1) {
-      std::string event_name = states_.begin()->first;
-      return Wait(event_name, wait_time);
-    }
-    return false;
+  else if (id_to_index_.size() == 1) {
+    return WaitId(id_to_index_.begin()->first, wait_time);
   }
-}
-// -----------------------------------------------------------------------------
-
-bool Event::Set(const std::string &state_name) {
-  std::unique_lock<std::mutex> auto_unlock(lock_);
-
-  if (states_.find(state_name) != states_.end()) {
-    states_[state_name] = true;
-    condition_.notify_all();
-    return true;
-  }
-
   return false;
 }
 // -----------------------------------------------------------------------------
 
-bool Event::Reset(const std::string &state_name) {
-  std::unique_lock<std::mutex> auto_unlock(lock_);
+bool Event::AddName(const std::string &state_name, bool manual_reset, bool initial_state) {
+  std::unique_lock<std::mutex> lock(lock_);
 
-  if (states_.find(state_name) != states_.end()) {
-    states_[state_name] = false;
-    return true;
+  // Check if already exists
+  if (name_to_id_.find(state_name) != name_to_id_.end()) {
+    return false; // Already exists
   }
 
-  return false;
-}
-// -----------------------------------------------------------------------------
-
-bool Event::Wait(const std::string &state_name, int64_t wait_time) {
-  std::unique_lock<std::mutex> auto_unlock(lock_);
-
-  // check state exists
-  if (states_.find(state_name) == states_.end()) {
-    return false;
+  // If adding first state to single-state event, switch to multi-state mode
+  if (is_single_state_) {
+    is_single_state_ = false;
+    // Exclude the implicit single-state bit from multi-state checks
+    id_to_index_.erase(SINGLE_EVENT_ID);
   }
 
-  // wait for state to be set
-  auto predicate = [this, &state_name]() {
-    return states_[state_name];
-  };
+  // Intern name and allocate index
+  uint32_t id = InternName(state_name);
+  uint32_t index = next_index_++;
+  id_to_index_[id] = index;
 
-  // wait with timeout
-  if (!condition_.wait_for(auto_unlock, milliseconds(wait_time), predicate)) {
-    return false;
-  }
+  // Ensure capacity
+  EnsureCapacityForIndex(index);
 
-  // reset state if not manual reset
-  if (!manual_resets_[state_name]) {
-    states_[state_name] = false;
+  // Set manual reset flag
+  manual_resets_[index] = manual_reset;
+  // Set initial state bit if requested
+  if (initial_state) {
+    SetBitUnsafe(index);
   }
 
   return true;
 }
 // -----------------------------------------------------------------------------
 
-const std::string Event::WaitAny(int64_t wait_time) {
-  std::unique_lock<std::mutex> auto_unlock(lock_);
+bool Event::RemoveName(const std::string &state_name) {
+  std::unique_lock<std::mutex> lock(lock_);
 
-  // wait for any state to be set
-  auto predicate = [this]() {
-    for (const auto& state_pair : states_) {
-      if (state_pair.second) {
-        return true;
-      }
-    }
+  auto name_it = name_to_id_.find(state_name);
+  if (name_it == name_to_id_.end()) {
     return false;
+  }
+
+  uint32_t id = name_it->second;
+  auto index_it = id_to_index_.find(id);
+  if (index_it != id_to_index_.end()) {
+    uint32_t index = index_it->second;
+    ClearBitUnsafe(index);
+    id_to_index_.erase(index_it);
+  }
+
+  name_to_id_.erase(name_it);
+
+  return true;
+}
+// -----------------------------------------------------------------------------
+
+bool Event::HasName(const std::string& state_name) {
+  std::unique_lock<std::mutex> lock(lock_);
+  return name_to_id_.find(state_name) != name_to_id_.end();
+}
+// -----------------------------------------------------------------------------
+
+bool Event::SetName(const std::string &state_name) {
+  std::unique_lock<std::mutex> lock(lock_);
+
+  auto it = name_to_id_.find(state_name);
+  if (it == name_to_id_.end()) {
+    return false;
+  }
+
+  uint32_t id = it->second;
+  uint32_t index = IndexOf(id);
+  if (index == INVALID_ID) {
+    return false;
+  }
+
+  SetBitUnsafe(index);
+  condition_.notify_all();
+
+  return true;
+}
+// -----------------------------------------------------------------------------
+
+bool Event::ResetName(const std::string &state_name) {
+  std::unique_lock<std::mutex> lock(lock_);
+
+  auto it = name_to_id_.find(state_name);
+  if (it == name_to_id_.end()) {
+    return false;
+  }
+
+  uint32_t id = it->second;
+  uint32_t index = IndexOf(id);
+  if (index == INVALID_ID) {
+    return false;
+  }
+
+  ClearBitUnsafe(index);
+
+  return true;
+}
+// -----------------------------------------------------------------------------
+
+bool Event::WaitName(const std::string &state_name, int64_t wait_time) {
+  std::unique_lock<std::mutex> lock(lock_);
+
+  auto it = name_to_id_.find(state_name);
+  if (it == name_to_id_.end()) {
+    return false;
+  }
+
+  uint32_t id = it->second;
+  uint32_t index = IndexOf(id);
+  if (index == INVALID_ID) {
+    return false;
+  }
+
+  // Wait for specific bit to be set
+  auto predicate = [this, index]() {
+    return GetBitUnsafe(index);
   };
 
-  // wait with timeout
-  if (!condition_.wait_for(auto_unlock, milliseconds(wait_time), predicate)) {
+  bool result;
+  if (wait_time < 0) {
+    condition_.wait(lock, predicate);
+    result = true;
+  }
+  else {
+    result = condition_.wait_for(lock, milliseconds(wait_time), predicate);
+  }
+
+  if (result && !manual_resets_[index]) {
+    ClearBitUnsafe(index);
+  }
+
+  return result;
+}
+// -----------------------------------------------------------------------------
+
+const std::string Event::WaitAnyName(int64_t wait_time) {
+  uint32_t id = WaitAnyId(wait_time);
+
+  if (id == INVALID_ID) {
     return "";
   }
 
-  // find and return the first set state
-  for (auto& state_pair : states_) {
-    if (state_pair.second) {
-      // reset state if not manual reset
-      if (!manual_resets_[state_pair.first]) {
-        state_pair.second = false;
-      }
-      return state_pair.first;
+  // Find name for this ID
+  std::unique_lock<std::mutex> lock(lock_);
+  for (const auto& [name, name_id] : name_to_id_) {
+    if (name_id == id) {
+      return name;
     }
   }
-
   return "";
 }
 // -----------------------------------------------------------------------------
 
-bool Event::WaitAll(int64_t wait_time) {
-  std::unique_lock<std::mutex> auto_unlock(lock_);
+uint32_t Event::GetId(std::string_view state_name) const {
+  std::string key(state_name);
+  auto it = name_to_id_.find(key);
+  return (it != name_to_id_.end()) ? it->second : INVALID_ID;
+}
+// -----------------------------------------------------------------------------
 
-  // wait for all states to be set
-  auto predicate = [this]() {
-    for (const auto& state_pair : states_) {
-      if (!state_pair.second) {
-        return false;
-      }
-    }
-    return true;
-  };
+bool Event::AddId(uint32_t state_id, bool manual_reset, bool initial_state) {
+  std::unique_lock<std::mutex> lock(lock_);
 
-  // wait with timeout
-  if (!condition_.wait_for(auto_unlock, milliseconds(wait_time), predicate)) {
-    return false;
+  if (id_to_index_.find(state_id) != id_to_index_.end()) {
+    return false; // Already exists
   }
 
-  // reset states if not manual reset
-  for (auto& state_pair : states_) {
-    if (!manual_resets_[state_pair.first]) {
-      state_pair.second = false;
-    }
+  // If adding first state to single-state event, switch to multi-state mode
+  if (is_single_state_) {
+    is_single_state_ = false;
+    // Exclude the implicit single-state bit from multi-state checks
+    id_to_index_.erase(SINGLE_EVENT_ID);
+  }
+
+  uint32_t index = next_index_++;
+  id_to_index_[state_id] = index;
+
+  // Ensure capacity
+  EnsureCapacityForIndex(index);
+
+  // Set manual reset flag
+  manual_resets_[index] = manual_reset;
+  // Set initial state bit if requested
+  if (initial_state) {
+    SetBitUnsafe(index);
   }
 
   return true;
+}
+// -----------------------------------------------------------------------------
+
+bool Event::RemoveId(uint32_t state_id) {
+  std::unique_lock<std::mutex> lock(lock_);
+
+  auto it = id_to_index_.find(state_id);
+  if (it == id_to_index_.end()) {
+    return false;
+  }
+
+  uint32_t index = it->second;
+  ClearBitUnsafe(index);
+  id_to_index_.erase(it);
+  return true;
+}
+// -----------------------------------------------------------------------------
+
+bool Event::HasId(uint32_t state_id) {
+  std::unique_lock<std::mutex> lock(lock_);
+  return id_to_index_.find(state_id) != id_to_index_.end();
+}
+// -----------------------------------------------------------------------------
+
+bool Event::SetId(uint32_t state_id) {
+  std::unique_lock<std::mutex> lock(lock_);
+
+  uint32_t index = IndexOf(state_id);
+  if (index == INVALID_ID) {
+    return false;
+  }
+
+  SetBitUnsafe(index);
+  condition_.notify_all();
+
+  return true;
+}
+// -----------------------------------------------------------------------------
+
+bool Event::ResetId(uint32_t state_id) {
+  std::unique_lock<std::mutex> lock(lock_);
+
+  uint32_t index = IndexOf(state_id);
+  if (index == INVALID_ID) {
+    return false;
+  }
+
+  ClearBitUnsafe(index);
+
+  return true;
+}
+// -----------------------------------------------------------------------------
+
+bool Event::WaitId(uint32_t state_id, int64_t timeout_ms) {
+  std::unique_lock<std::mutex> lock(lock_);
+
+  uint32_t index = IndexOf(state_id);
+  if (index == INVALID_ID) {
+    return false;
+  }
+
+  auto predicate = [this, index]() {
+    return GetBitUnsafe(index);
+  };
+
+  bool result;
+  if (timeout_ms < 0) {
+    condition_.wait(lock, predicate);
+    result = true;
+  }
+  else {
+    result = condition_.wait_for(lock, milliseconds(timeout_ms), predicate);
+  }
+
+  if (result && !manual_resets_[index]) {
+    ClearBitUnsafe(index);
+  }
+
+  return result;
+}
+// -----------------------------------------------------------------------------
+
+uint32_t Event::WaitAnyId(int64_t timeout_ms) {
+  std::unique_lock<std::mutex> lock(lock_);
+
+  auto predicate = [this]() {
+    return AnySetUnsafe();
+  };
+
+  bool result;
+  if (timeout_ms < 0) {
+    condition_.wait(lock, predicate);
+    result = true;
+  }
+  else {
+    result = condition_.wait_for(lock, milliseconds(timeout_ms), predicate);
+  }
+
+  if (!result) {
+    return INVALID_ID;
+  }
+
+  uint32_t found_id = FirstSetUnsafe();
+  if (found_id != INVALID_ID) {
+    uint32_t index = IndexOf(found_id);
+    if (index != INVALID_ID && !manual_resets_[index]) {
+      ClearBitUnsafe(index);
+    }
+  }
+
+  return found_id;
+}
+// -----------------------------------------------------------------------------
+
+bool Event::WaitAll(int64_t timeout_ms) {
+  std::unique_lock<std::mutex> lock(lock_);
+
+  auto predicate = [this]() {
+    return AllSetUnsafe();
+  };
+
+  bool result;
+  if (timeout_ms < 0) {
+    condition_.wait(lock, predicate);
+    result = true;
+  }
+  else {
+    result = condition_.wait_for(lock, milliseconds(timeout_ms), predicate);
+  }
+
+  if (result) {
+    // Reset all non-manual-reset states
+    for (const auto& [id, index] : id_to_index_) {
+      if (!manual_resets_[index]) {
+        ClearBitUnsafe(index);
+      }
+    }
+  }
+
+  return result;
+}
+// -----------------------------------------------------------------------------
+
+uint32_t Event::InternName(std::string_view state_name) {
+  std::string key(state_name);
+  auto it = name_to_id_.find(key);
+  if (it != name_to_id_.end()) {
+    return it->second;
+  }
+  uint32_t state_id = next_id_++;
+  name_to_id_[key] = state_id;
+  return state_id;
+}
+// -----------------------------------------------------------------------------
+
+uint32_t Event::IndexOf(uint32_t state_id) const {
+  auto it = id_to_index_.find(state_id);
+  return (it != id_to_index_.end()) ? it->second : INVALID_ID;
+}
+// -----------------------------------------------------------------------------
+
+void Event::EnsureCapacityForIndex(uint32_t index) {
+  uint32_t word_index = index / 64;
+  uint32_t new_capacity = word_index + 1;
+
+  if (new_capacity > bits_capacity_) {
+    // Allocate new array
+    auto* new_bits = new std::atomic<uint64_t>[new_capacity];
+
+    // Copy old data (atomic loads/stores)
+    for (uint32_t i = 0; i < bits_capacity_; ++i) {
+      new_bits[i].store(bits_[i].load(std::memory_order_acquire), std::memory_order_relaxed);
+    }
+
+    // Initialize new words to 0
+    for (uint32_t i = bits_capacity_; i < new_capacity; ++i) {
+      new_bits[i].store(0ULL, std::memory_order_relaxed);
+    }
+
+    // Swap and delete old
+    delete[] bits_;
+    bits_ = new_bits;
+    bits_capacity_ = new_capacity;
+  }
+
+  if (index >= manual_resets_.size()) {
+    manual_resets_.resize(index + 1, false);
+  }
+}
+// -----------------------------------------------------------------------------
+
+bool Event::GetBitUnsafe(uint32_t index) const {
+  uint32_t word_index = index / 64;
+  uint32_t bit_index = index % 64;
+  if (word_index >= bits_capacity_) {
+    return false;
+  }
+  uint64_t word = bits_[word_index].load(std::memory_order_acquire);
+  return (word & (1ULL << bit_index)) != 0;
+}
+// -----------------------------------------------------------------------------
+
+bool Event::SetBitUnsafe(uint32_t index) {
+  uint32_t word_index = index / 64;
+  uint32_t bit_index = index % 64;
+  if (word_index >= bits_capacity_) {
+    return false;
+  }
+
+  uint64_t mask = 1ULL << bit_index;
+  bits_[word_index].fetch_or(mask, std::memory_order_release);
+
+  return true;
+}
+// -----------------------------------------------------------------------------
+
+bool Event::ClearBitUnsafe(uint32_t index) {
+  uint32_t word_index = index / 64;
+  uint32_t bit_index = index % 64;
+  if (word_index >= bits_capacity_) {
+    return false;
+  }
+
+  uint64_t mask = ~(1ULL << bit_index);
+  bits_[word_index].fetch_and(mask, std::memory_order_release);
+
+  return true;
+}
+// -----------------------------------------------------------------------------
+
+bool Event::AnySetUnsafe() const {
+  for (uint32_t i = 0; i < bits_capacity_; ++i) {
+    if (bits_[i].load(std::memory_order_acquire) != 0) {
+      return true;
+    }
+  }
+  return false;
+}
+// -----------------------------------------------------------------------------
+
+bool Event::AllSetUnsafe() const {
+  // Check all registered IDs have their bits set
+  for (const auto& [id, index] : id_to_index_) {
+    if (!GetBitUnsafe(index)) {
+      return false;
+    }
+  }
+  return true;
+}
+// -----------------------------------------------------------------------------
+
+uint32_t Event::FirstSetUnsafe() const {
+  for (const auto& [id, index] : id_to_index_) {
+    if (GetBitUnsafe(index)) {
+      return id;
+    }
+  }
+  return INVALID_ID;
 }
 // -----------------------------------------------------------------------------
 

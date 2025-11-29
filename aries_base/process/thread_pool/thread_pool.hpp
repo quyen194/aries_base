@@ -28,6 +28,7 @@
 
 #include "aries_base/container/linked_list.hpp"
 #include "aries_base/process/event/event.hpp"
+#include "aries_base/process/thread_pool/internal/definitions.hpp"
 #include "aries_base/process/thread_pool/internal/delay_task.hpp"
 #include "aries_base/process/thread_pool/internal/pending_task.hpp"
 #include "aries_base/process/thread_pool/internal/thread_worker.hpp"
@@ -57,7 +58,7 @@ class ThreadPool {
   static ThreadPool* Instance();
   static void CreateInstance(uint16_t idle_count, uint16_t max_count);
   static void DestroyInstance();
-  static void AdjustResource(uint16_t idle_count, uint16_t max_count);
+  static void AdjustResources(uint16_t idle_count, uint16_t max_count);
 
   static void PostTask(std::function<void()> task_func, Event* task_end_event = nullptr);
   static void PostTask(std::function<void(void*)> task_func,
@@ -72,9 +73,9 @@ class ThreadPool {
                               Event* task_end_events = nullptr);
 
  public:
-  static const std::string TASK_CANCEL_EVENT;  // cancel task from out side
-  static const std::string TASK_PASS_EVENT;    // task end after excuted
-  static const std::string TASK_FAIL_EVENT;    // task end before excuted (be cancelled)
+  static const uint32_t TASK_CANCEL_EVENT;  // cancel task from out side
+  static const uint32_t TASK_FAIL_EVENT;    // task end before excuted (be cancelled)
+  static const uint32_t TASK_PASS_EVENT;    // task end after excuted
 
  private:
   void PostTaskImp(std::function<void()> task_func, Event* task_end_events = nullptr);

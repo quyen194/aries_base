@@ -31,25 +31,26 @@ int main() {
   ThreadPool::CreateInstance(2, 8);
 
   Event ev(false, false);
-  Event cancel_ev(false, false);
+  ev.AddId(TaskResultEvent::kCancel);  // TASK_CANCEL_EVENT
+  ev.AddId(TaskResultEvent::kCancelled);    // TASK_FAIL_EVENT
 
   // Post delayed task far in future and cancel it
   ThreadPool::PostDelayedTask([](){ std::cout << "should not run" << std::endl; }, 5000, &ev);
 
   // The ThreadPool's PostDelayedTask attaches named end-state flags to the
-  // provided `Event` (it calls `task_end_events->Add(TASK_CANCEL_EVENT, ...)`,
+  // provided `Event` (it calls `task_end_events->AddId(TaskResultEvent::kCancel, ...)`,
   // etc.). To cancel a delayed task the caller sets the cancel named state
-  // on the same `Event` object. The Event API exposes `Set(const std::string&)`
-  // so callers can do `ev.Set(ThreadPool::TASK_CANCEL_EVENT)`.
+  // on the same `Event` object. The Event API exposes `SetId(uint32_t)`
+  // so callers can do `ev.SetId(TaskResultEvent::kCancel)`.
 
   // Try to cancel immediately by setting the named cancel state.
-  ev.Set(ThreadPool::TASK_CANCEL_EVENT);
+  ev.SetId(TaskResultEvent::kCancel);
 
   // The ThreadPool will observe the cancel flag and mark the task as failed by
   // setting `TASK_FAIL_EVENT` on the same `Event`. Wait for that as the
   // canonical confirmation of cancellation (best-effort with timeout).
-  if (!ev.Wait(ThreadPool::TASK_FAIL_EVENT, 1000)) {
-    std::cerr << "cancellation test: did not observe TASK_FAIL_EVENT within timeout" << std::endl;
+  if (!ev.WaitId(TaskResultEvent::kCancelled, 1000)) {
+    std::cerr << "cancellation test: did not observe TaskResultEvent::kCancelled within timeout" << std::endl;
     ThreadPool::DestroyInstance();
     return 2;
   }

@@ -33,10 +33,6 @@ using namespace std::chrono;
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
-const std::string ThreadPool::TASK_CANCEL_EVENT = "task_cancel_event";
-const std::string ThreadPool::TASK_PASS_EVENT = "task_pass_event";
-const std::string ThreadPool::TASK_FAIL_EVENT = "task_fail_event";
-// -----------------------------------------------------------------------------
 ThreadPool* ThreadPool::instance_ = nullptr;
 // -----------------------------------------------------------------------------
 
@@ -47,8 +43,8 @@ ThreadPool::ThreadPool(uint16_t idle_count, uint16_t max_count) {
   max_idle_thread_ = idle_count;
   thread_count_ = 0;
   max_thread_ = max_count;
-  events_.Add(STAGE_CHANGE_EVENT, false, false);
-  events_.Add(SHUTDOWN_EVENT, false, false);
+  events_.AddId(ThreadPoolEvent::kStageChange, false, false);
+  events_.AddId(ThreadPoolEvent::kShutdown, false, false);
   worker_thread_ = std::thread(&ThreadPool::Worker, this);
 
   // allocate
@@ -71,7 +67,7 @@ ThreadPool::~ThreadPool() {
   }
 
   // stop thread pool worker
-  events_.Set(SHUTDOWN_EVENT);
+  events_.SetId(ThreadPoolEvent::kShutdown);
   worker_thread_.join();
 }
 // -----------------------------------------------------------------------------
@@ -99,9 +95,9 @@ void ThreadPool::DestroyInstance() {
 }
 // -----------------------------------------------------------------------------
 
-void ThreadPool::AdjustResource(uint16_t idle_count, uint16_t max_count) {
-  instance_->max_idle_thread_ = idle_count;
-  instance_->max_thread_ = max_count;
+void ThreadPool::AdjustResources(uint16_t idle_count, uint16_t max_count) {
+  Instance()->max_idle_thread_ = idle_count;
+  Instance()->max_thread_ = max_count;
 }
 // -----------------------------------------------------------------------------
 
@@ -206,12 +202,6 @@ void ThreadPool::PostTaskImp(std::function<void(void*)> task_func,
 void ThreadPool::PostDelayedTaskImp(std::function<void()> task_func,
                                     int64_t wait_time,
                                     Event* task_end_events) {
-  if (task_end_events) {
-    task_end_events->Add(TASK_CANCEL_EVENT, false, false);
-    task_end_events->Add(TASK_PASS_EVENT, false, false);
-    task_end_events->Add(TASK_FAIL_EVENT, false, false);
-  }
-
   std::unique_lock<std::recursive_mutex> auto_unlock(lock_);
 
   DelayedTask* delayed_task = new DelayedTask();
@@ -229,12 +219,6 @@ void ThreadPool::PostDelayedTaskImp(std::function<void(void*)> task_func,
                                     void* task_param,
                                     int64_t wait_time,
                                     Event* task_end_events) {
-  if (task_end_events) {
-    task_end_events->Add(TASK_CANCEL_EVENT, false, false);
-    task_end_events->Add(TASK_PASS_EVENT, false, false);
-    task_end_events->Add(TASK_FAIL_EVENT, false, false);
-  }
-
   std::unique_lock<std::recursive_mutex> auto_unlock(lock_);
 
   DelayedTask* delayed_task = new DelayedTask();
@@ -281,10 +265,10 @@ void ThreadPool::Worker() {
   std::string event;
 
   while (true) {
-    std::string event = events_.WaitAny(100);
+    uint32_t event = events_.WaitAnyId(100);
 
     // worker thread changed state: busy -> free
-    if (event == STAGE_CHANGE_EVENT) {
+    if (event == ThreadPoolEvent::kStageChange) {
       std::unique_lock<std::recursive_mutex> auto_unlock(lock_);
 
       bool check_for_free = false;
@@ -352,8 +336,9 @@ void ThreadPool::Worker() {
 
         // if task is cancelled
         if (task->task_end_events != nullptr &&
-            task->task_end_events->Wait(TASK_CANCEL_EVENT, 1)) {
-          task->task_end_events->Set(TASK_FAIL_EVENT);
+            task->task_end_events->HasId(TaskResultEvent::kCancel) &&
+            task->task_end_events->WaitId(TaskResultEvent::kCancel, 1)) {
+          task->task_end_events->SetId(TaskResultEvent::kCancelled);
           // remove node
           LinkNode<DelayedTask>* delete_node = node;
           node = node->next();
@@ -361,10 +346,6 @@ void ThreadPool::Worker() {
         }
         else if ((task->executing_time < now) ||
                  ((task->executing_time - now) > hours(24))) {
-          // post task
-          task->task_end_events->Remove(TASK_CANCEL_EVENT);
-          task->task_end_events->Remove(TASK_FAIL_EVENT);
-
           if (task->task_func_0) {
             PostTaskImp(task->task_func_0, task->task_end_events);
           }
@@ -383,7 +364,7 @@ void ThreadPool::Worker() {
     }
 
     // need shutdown
-    if (event == SHUTDOWN_EVENT) {
+    if (event == ThreadPoolEvent::kShutdown) {
       return;
     }
   }

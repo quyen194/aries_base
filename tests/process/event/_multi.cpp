@@ -31,20 +31,20 @@ using namespace aries_base::process;
 
 int main() {
   Event ev; // single-state default but we'll use named states
-  ev.Add("a", false, false);
-  ev.Add("b", false, false);
+  ev.AddName("a", false, false);
+  ev.AddName("b", false, false);
 
   bool waiter_any_ok = false;
   std::thread t_any([&]{
-    std::string s = ev.WaitAny(1000);
+    std::string s = ev.WaitAnyName(1000);
     if (!s.empty()) waiter_any_ok = true;
   });
 
   std::this_thread::sleep_for(milliseconds(50));
-  ev.Set("b");
+  ev.SetName("b");
 
   t_any.join();
-  assert(waiter_any_ok && "WaitAny should return when a state is set");
+  assert(waiter_any_ok && "WaitAnyName should return when a state is set");
 
   // WaitAll case
   bool wait_all_ok = false;
@@ -53,8 +53,8 @@ int main() {
   });
 
   std::this_thread::sleep_for(milliseconds(50));
-  ev.Set("a");
-  ev.Set("b");
+  ev.SetName("a");
+  ev.SetName("b");
 
   t_all.join();
   assert(wait_all_ok && "WaitAll should return true when all states set");

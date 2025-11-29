@@ -6,7 +6,7 @@
   email:     quyen19492@gmail.com
 
   created:   2025/11/24 13:35
-  filename:  libs/aries_base/examples/process/event/multi_state.cpp
+  filename:  aries_base/examples/process/event/multi_state.cpp
 
   purpose:   Multi-state Event example
 *********************************************************************/
@@ -34,13 +34,13 @@ int main() {
   Event ev; // single-state by default
 
   // Add named states
-  ev.Add("one", false, false);
-  ev.Add("two", false, false);
+  ev.AddName("one", false, false);
+  ev.AddName("two", false, false);
 
   // WaitAny example
   std::thread waiter_any([&]{
     std::cout << "waiter_any: waiting for either 'one' or 'two'...\n";
-    std::string s = ev.WaitAny();
+    std::string s = ev.WaitAnyName();
     std::cout << "waiter_any: signaled state: " << s << "\n";
   });
 
@@ -53,11 +53,11 @@ int main() {
 
   std::this_thread::sleep_for(200ms);
   std::cout << "main: set 'one'\n";
-  ev.Set("one");
+  ev.SetName("one");
 
   std::this_thread::sleep_for(200ms);
   std::cout << "main: set 'two'\n";
-  ev.Set("two");
+  ev.SetName("two");
 
   waiter_any.join();
   waiter_all.join();

@@ -19,6 +19,10 @@
 
 
 // -----------------------------------------------------------------------------
+#include <cstdint>
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
 namespace aries_base {
 // -----------------------------------------------------------------------------
 
@@ -31,10 +35,32 @@ namespace thread_pool {
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
-#define STAGE_CHANGE_EVENT "stage_change_event"
-#define TASK_START_EVENT "task_start_event"
-#define SHUTDOWN_EVENT "shutdown_event"
-#define WORKER_END_EVENT "worker_end_event"
+
+namespace _ThreadPoolEvent {
+enum T : uint32_t {
+  kStageChange = 1,
+  kTaskStart,
+  kShutdown,
+  kWorkerEnd,
+};
+}
+typedef _ThreadPoolEvent::T ThreadPoolEvent;
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+
+#ifndef TASK_RESULT_EVENT
+#define TASK_RESULT_EVENT
+namespace _TaskResultEvent {
+enum T : uint32_t {
+  kCancel = 0x80000000,     // cancel task from out side
+  kCancelled,               // task is cancelled
+  kFail,                    // task end with exception
+  kPass,                    // task end successfully
+};
+}
+typedef _TaskResultEvent::T TaskResultEvent;
+#endif  // TASK_RESULT_EVENT
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
