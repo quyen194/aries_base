@@ -66,6 +66,7 @@ class Event {
   bool ResetName(const std::string &state_name);
   bool WaitName(const std::string &state_name, int64_t wait_time = -1);
   const std::string WaitAnyName(int64_t wait_time = -1);
+  const std::string WaitNames(const std::vector<std::string> &state_names, int64_t wait_time = -1);
 
   // Get numeric ID for a state name (returns INVALID_ID if not found)
   uint32_t GetId(std::string_view name) const;
@@ -80,6 +81,7 @@ class Event {
   bool ResetId(uint32_t state_id);
   bool WaitId(uint32_t state_id, int64_t timeout_ms = -1);
   uint32_t WaitAnyId(int64_t timeout_ms = -1);
+  uint32_t WaitIds(const std::vector<uint32_t> &state_ids, int64_t wait_time = -1);
 
   // Multi-state wait all
   bool WaitAll(int64_t timeout_ms = -1);

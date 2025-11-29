@@ -177,6 +177,8 @@ bool Event::SetName(const std::string &state_name) {
   }
 
   SetBitUnsafe(index);
+
+  lock.unlock();
   condition_.notify_all();
 
   return true;
@@ -257,6 +259,37 @@ const std::string Event::WaitAnyName(int64_t wait_time) {
 }
 // -----------------------------------------------------------------------------
 
+const std::string Event::WaitNames(const std::vector<std::string>& state_names,
+                                   int64_t wait_time) {
+  std::vector<uint32_t> ids;
+  {
+    std::unique_lock<std::mutex> lock(lock_);
+    for (const auto& name : state_names) {
+      auto it = name_to_id_.find(name);
+      if (it != name_to_id_.end()) {
+        ids.push_back(it->second);
+      }
+    }
+  }
+
+  uint32_t id = WaitIds(ids, wait_time);
+
+  if (id == INVALID_ID) {
+    return "";
+  }
+
+  // Find name for this ID
+  std::unique_lock<std::mutex> lock(lock_);
+  for (const auto& [name, name_id] : name_to_id_) {
+    if (name_id == id) {
+      return name;
+    }
+  }
+
+  return "";
+}
+// -----------------------------------------------------------------------------
+
 uint32_t Event::GetId(std::string_view state_name) const {
   std::string key(state_name);
   auto it = name_to_id_.find(key);
@@ -306,6 +339,7 @@ bool Event::RemoveId(uint32_t state_id) {
   uint32_t index = it->second;
   ClearBitUnsafe(index);
   id_to_index_.erase(it);
+
   return true;
 }
 // -----------------------------------------------------------------------------
@@ -325,6 +359,8 @@ bool Event::SetId(uint32_t state_id) {
   }
 
   SetBitUnsafe(index);
+
+  lock.unlock();
   condition_.notify_all();
 
   return true;
@@ -403,6 +439,38 @@ uint32_t Event::WaitAnyId(int64_t timeout_ms) {
   }
 
   return found_id;
+}
+// -----------------------------------------------------------------------------
+
+uint32_t Event::WaitIds(const std::vector<uint32_t>& state_ids,
+                        int64_t wait_time) {
+  std::unique_lock<std::mutex> lock(lock_);
+
+  uint32_t signaled_id = INVALID_ID;
+
+  auto predicate = [this, &state_ids, &signaled_id]() {
+    for (const auto& id : state_ids) {
+      uint32_t index = IndexOf(id);
+      if (index != INVALID_ID && GetBitUnsafe(index)) {
+        // clear bit if not manual reset
+        if (!manual_resets_[index]) {
+          ClearBitUnsafe(index);
+        }
+        signaled_id = id;
+        return true;
+      }
+    }
+    return false;
+  };
+
+  if (wait_time < 0) {
+    condition_.wait(lock, predicate);
+  }
+  else {
+    condition_.wait_for(lock, milliseconds(wait_time), predicate);
+  }
+
+  return signaled_id;
 }
 // -----------------------------------------------------------------------------
 

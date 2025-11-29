@@ -53,9 +53,11 @@ int main() {
     std::this_thread::sleep_for(milliseconds(50 + (attempt % 30)));
     ev.SetId(TaskResultEvent::kCancel);
 
-    std::this_thread::sleep_for(milliseconds(100));
-
-    uint32_t result = ev.WaitAnyId(200);
+    uint32_t result = ev.WaitIds({
+            TaskResultEvent::kCancelled,
+            TaskResultEvent::kPass
+        },
+        200);
     std::cout << "Attempt " << attempt << " result: " << result << "\n";
 
     // Should be either PASS (executed) or FAIL (canceled)
