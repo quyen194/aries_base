@@ -23,6 +23,7 @@
 
 
 // -----------------------------------------------------------------------------
+using namespace std::chrono;
 using namespace process;
 // -----------------------------------------------------------------------------
 
@@ -39,7 +40,7 @@ int main() {
     if (!s.empty()) waiter_any_ok = true;
   });
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  std::this_thread::sleep_for(milliseconds(50));
   ev.Set("b");
 
   t_any.join();
@@ -51,7 +52,7 @@ int main() {
     wait_all_ok = ev.WaitAll(1000);
   });
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  std::this_thread::sleep_for(milliseconds(50));
   ev.Set("a");
   ev.Set("b");
 

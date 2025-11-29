@@ -331,7 +331,7 @@ void ThreadPool::Worker() {
 
         // remove node
         LinkNode<PendingTask>* delete_node = node;
-        node = node->previous();
+        node = node->next();
         delete_node->Free();
       }
     }
@@ -340,42 +340,41 @@ void ThreadPool::Worker() {
     {
       std::unique_lock<std::recursive_mutex> auto_unlock(lock_);
 
-      steady_clock::time_point now = steady_clock::now();
       LinkNode<DelayedTask>* node = delayed_tasks_.head();
       while (node != delayed_tasks_.end_list()) {
         DelayedTask* task = node->value();
-        if ((task->executing_time < now) ||
-            ((task->executing_time - now) > hours(24))) {
-          // if task is cancelled
-          if (task->task_end_events != nullptr &&
-              task->task_end_events->Wait(TASK_CANCEL_EVENT, 1)) {
-            task->task_end_events->Set(TASK_FAIL_EVENT);
-            // remove node
-            LinkNode<DelayedTask>* delete_node = node;
-            node = node->previous();
-            delete_node->Free();
-          }
-          else {
-            // post task
-            task->task_end_events->Remove(TASK_CANCEL_EVENT);
-            task->task_end_events->Remove(TASK_FAIL_EVENT);
 
-            if (task->task_func_0) {
-              PostTaskImp(task->task_func_0, task->task_end_events);
-            }
-            else if (task->task_func_1) {
-              PostTaskImp(task->task_func_1,
-                          task->task_param,
-                          task->task_end_events);
-            }
+        steady_clock::time_point now = steady_clock::now();
 
-            // remove node
-            LinkNode<DelayedTask>* delete_node = node;
-            node = node->previous();
-            delete_node->Free();
-          }
+        // if task is cancelled
+        if (task->task_end_events != nullptr &&
+            task->task_end_events->Wait(TASK_CANCEL_EVENT, 1)) {
+          task->task_end_events->Set(TASK_FAIL_EVENT);
+          // remove node
+          LinkNode<DelayedTask>* delete_node = node;
+          node = node->next();
+          delete_node->Free();
         }
-        node = node->next();
+        else if ((task->executing_time < now) ||
+                 ((task->executing_time - now) > hours(24))) {
+          // post task
+          task->task_end_events->Remove(TASK_CANCEL_EVENT);
+          task->task_end_events->Remove(TASK_FAIL_EVENT);
+
+          if (task->task_func_0) {
+            PostTaskImp(task->task_func_0, task->task_end_events);
+          }
+          else if (task->task_func_1) {
+            PostTaskImp(task->task_func_1,
+                        task->task_param,
+                        task->task_end_events);
+          }
+
+          // remove node
+          LinkNode<DelayedTask>* delete_node = node;
+          node = node->next();
+          delete_node->Free();
+        }
       }
     }
 
