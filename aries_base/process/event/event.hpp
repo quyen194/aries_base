@@ -8,9 +8,11 @@
   created:   2025/11/16 15:32
   filename:  aries_base/process/event/event.hpp
 
-  purpose:
+  purpose:   Event synchronization primitive with single-state and
+             multi-state support. Uses numeric IDs internally with
+             bitset-backed storage for performance, while maintaining
+             ergonomic string-based API via interning.
 *********************************************************************/
-
 
 
 // -----------------------------------------------------------------------------
@@ -20,13 +22,18 @@
 
 
 // -----------------------------------------------------------------------------
-#include <condition_variable>
+#include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <cstdint>
 #include <limits>
 #include <map>
 #include <mutex>
 #include <string>
+#include <string_view>
+#include <vector>
+
+#include "aries_base/definitions/macro.hpp"
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
@@ -44,28 +51,80 @@ class Event {
   Event(bool manual_reset = false, bool initial_state = false);
   virtual ~Event();
 
-  bool Add(const std::string &state_name, bool manual_reset = false, bool initial_state = false);
-  void Remove(const std::string &state_name);
-  bool Has(const std::string &state_name);
-
-  // single state
+  // Single state operations
   bool Set();
   bool Reset();
   bool Wait(int64_t wait_time = -1);
 
-  // multi state
-  bool Set(const std::string &state_name);
-  bool Reset(const std::string &state_name);
-  bool Wait(const std::string &state_name, int64_t wait_time = -1);
-  const std::string WaitAny(int64_t wait_time = -1);
-  bool WaitAll(int64_t wait_time = -1);
+  // Multi-state String-based API (interns to numeric IDs)
+  bool AddName(const std::string &state_name, bool manual_reset = false, bool initial_state = false);
+  bool RemoveName(const std::string &state_name);
+  bool HasName(const std::string &state_name);
+  // Signal event by name
+  bool SetName(const std::string &state_name);
+  // Reset event state by name
+  bool ResetName(const std::string &state_name);
+  bool WaitName(const std::string &state_name, int64_t wait_time = -1);
+  const std::string WaitAnyName(int64_t wait_time = -1);
+
+  // Get numeric ID for a state name (returns INVALID_ID if not found)
+  uint32_t GetId(std::string_view name) const;
+
+  // Multi-state Numeric-based API (fast path - use for performance-critical code)
+  bool AddId(uint32_t id, bool manual_reset = false, bool initial_state = false);
+  bool RemoveId(uint32_t id);
+  bool HasId(uint32_t id);
+  // Signal event by ID
+  bool SetId(uint32_t id);
+  // Reset event state by ID
+  bool ResetId(uint32_t id);
+  bool WaitId(uint32_t id, int64_t timeout_ms = -1);
+  uint32_t WaitAnyId(int64_t timeout_ms = -1);
+
+  // Multi-state wait all
+  bool WaitAll(int64_t timeout_ms = -1);
+
+ private:
+  // String name interning - one-time conversion to numeric ID
+  uint32_t InternName(std::string_view name);
+
+  // Index management for bitset storage
+  uint32_t IndexOf(uint32_t id) const;
+  void EnsureCapacityForIndex(uint32_t index);
+
+  // Bitset helper functions (unsafe - caller must hold lock)
+  bool GetBitUnsafe(uint32_t index) const;
+  bool SetBitUnsafe(uint32_t index);
+  bool ClearBitUnsafe(uint32_t index);
+  bool AnySetUnsafe() const;
+  bool AllSetUnsafe() const;
+  uint32_t FirstSetUnsafe() const;
 
  private:
   bool is_single_state_;
   std::mutex lock_;
   std::condition_variable condition_;
-  std::map<std::string, bool> states_;
-  std::map<std::string, bool> manual_resets_;
+
+  // String name to numeric ID mapping (for interning)
+  std::map<std::string, uint32_t> name_to_id_;
+  uint32_t next_id_;
+
+  // Numeric ID to bitset index mapping
+  std::map<uint32_t, uint32_t> id_to_index_;
+  uint32_t next_index_;
+
+  // Bitset-backed state storage (64-bit words) - raw array since atomic is not copyable
+  std::atomic<uint64_t>* bits_;
+  uint32_t bits_capacity_; // number of 64-bit words allocated
+
+  // Manual reset flags (indexed by bitset index)
+  std::vector<bool> manual_resets_;
+
+ public:
+  static const uint32_t INVALID_ID;
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(Event);
 };
 // -----------------------------------------------------------------------------
 
