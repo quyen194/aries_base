@@ -22,6 +22,7 @@
 
 
 // -----------------------------------------------------------------------------
+using namespace std::chrono;
 using namespace aries_base::process;
 // -----------------------------------------------------------------------------
 
@@ -45,7 +46,7 @@ int main() {
 
     ThreadPool::PostTask([i]() {
       // Simulate work
-      std::this_thread::sleep_for(std::chrono::milliseconds(50 + (i * 10)));
+      std::this_thread::sleep_for(milliseconds(50 + (i * 10)));
       std::cout << "task " << i << " executed on thread\n";
     }, ev);
   }

@@ -23,6 +23,7 @@
 
 
 // -----------------------------------------------------------------------------
+using namespace std::chrono;
 using namespace aries_base::process;
 // -----------------------------------------------------------------------------
 
@@ -41,7 +42,7 @@ int main() {
   });
 
   // ensure waiter is waiting
-  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  std::this_thread::sleep_for(milliseconds(50));
   ev.Set();
 
   t.join();
