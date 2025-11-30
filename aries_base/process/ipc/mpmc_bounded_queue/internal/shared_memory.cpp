@@ -96,13 +96,6 @@ SharedMemory::SharedMemory(IpcType ipc_type, size_t block_size, uint32_t block_c
 SharedMemory::~SharedMemory() {}
 // -----------------------------------------------------------------------------
 
-constexpr uint32_t SharedMemory::MemorySizeNeeded(size_t block_size,
-                                                  uint32_t block_count) {
-  return sizeof(SharedMemory) - sizeof(SharedMemory::blocks_[0])
-      + block_size * block_count;
-}
-// -----------------------------------------------------------------------------
-
 uint32_t SharedMemory::MemorySizeNeeded() {
   return MemorySizeNeeded(block_size_, block_count_);
 }

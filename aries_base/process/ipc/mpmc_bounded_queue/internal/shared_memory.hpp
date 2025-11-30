@@ -103,7 +103,12 @@ class SharedMemory {
   SharedMemory(IpcType ipc_type, size_t block_size, uint32_t block_count);
   ~SharedMemory();
 
-  static constexpr uint32_t MemorySizeNeeded(size_t block_size, uint32_t block_count);
+  static constexpr uint32_t MemorySizeNeeded(size_t block_size,
+                                             uint32_t block_count) {
+    return sizeof(SharedMemory) - sizeof(SharedMemory::blocks_[0])
+        + block_size * block_count;
+  }
+
   uint32_t MemorySizeNeeded();
 
   bool IsValid() const;
