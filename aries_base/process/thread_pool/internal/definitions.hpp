@@ -8,7 +8,7 @@
   created:   2025/11/16 22:36
   filename:  aries_base/process/thread_pool/internal/definitions.hpp
 
-  purpose:
+  purpose:   Thread pool internal definitions
 *********************************************************************/
 
 

@@ -8,7 +8,7 @@
   created:   2025/11/16 22:37
   filename:  aries_base/process/thread_pool/internal/delay_task.hpp
 
-  purpose:
+  purpose:   Thread pool internal delayed task definition
 *********************************************************************/
 
 
@@ -50,6 +50,7 @@ struct DelayedTask : LinkNode<DelayedTask> {
   std::function<void(void*)> task_func_1;
   void* task_param;
   steady_clock::time_point executing_time;
+  bool exception_handling;
   Event *task_end_events;
 };
 // -----------------------------------------------------------------------------

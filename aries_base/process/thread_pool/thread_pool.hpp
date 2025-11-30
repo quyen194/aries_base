@@ -8,7 +8,7 @@
   created:   2025/11/16 11:51
   filename:  aries_base/process/thread_pool/thread_pool.hpp
 
-  purpose:
+  purpose:   Thread pool implementation
 *********************************************************************/
 
 
@@ -59,11 +59,13 @@ class ThreadPool {
   static void CreateInstance(uint16_t idle_count, uint16_t max_count);
   static void DestroyInstance();
   static void AdjustResources(uint16_t idle_count, uint16_t max_count);
+  static void SetExceptionHandling(bool enable);
 
-  static void PostTask(std::function<void()> task_func, Event* task_end_event = nullptr);
+  // without exception handling
+  static void PostTask(std::function<void()> task_func, Event* task_end_events = nullptr);
   static void PostTask(std::function<void(void*)> task_func,
                        void* task_param,
-                       Event* task_end_event = nullptr);
+                       Event* task_end_events = nullptr);
   static void PostDelayedTask(std::function<void()> task_func,
                               int64_t wait_time = -1,
                               Event* task_end_events = nullptr);
@@ -72,12 +74,26 @@ class ThreadPool {
                               int64_t wait_time = -1,
                               Event* task_end_events = nullptr);
 
- public:
-  static const uint32_t TASK_CANCEL_EVENT;  // cancel task from out side
-  static const uint32_t TASK_FAIL_EVENT;    // task end before excuted (be cancelled)
-  static const uint32_t TASK_PASS_EVENT;    // task end after excuted
+  // with exception handling
+  static void PostTask(std::function<void()> task_func, bool exception_handling, Event* task_end_events = nullptr);
+  static void PostTask(std::function<void(void*)> task_func,
+                       void* task_param,
+                       bool exception_handling,
+                       Event* task_end_events = nullptr);
+  static void PostDelayedTask(std::function<void()> task_func,
+                              int64_t wait_time,
+                              bool exception_handling,
+                              Event* task_end_events = nullptr);
+  static void PostDelayedTask(std::function<void(void*)> task_func,
+                              void* task_param,
+                              int64_t wait_time,
+                              bool exception_handling,
+                              Event* task_end_events = nullptr);
 
  private:
+  void SetExceptionHandlingImp(bool enable);
+
+  // without exception handling
   void PostTaskImp(std::function<void()> task_func, Event* task_end_events = nullptr);
   void PostTaskImp(std::function<void(void*)> task_func, void* task_param,
                    Event* task_end_events = nullptr);
@@ -88,11 +104,32 @@ class ThreadPool {
                           void* task_param,
                           int64_t wait_time = -1,
                           Event* task_end_events = nullptr);
+
+  // with exception handling
+  void PostTaskImp(std::function<void()> task_func,
+                   bool exception_handling,
+                   Event* task_end_events = nullptr);
+  void PostTaskImp(std::function<void(void*)> task_func,
+                   void* task_param,
+                   bool exception_handling,
+                   Event* task_end_events = nullptr);
+  void PostDelayedTaskImp(std::function<void()> task_func,
+                          int64_t wait_time,
+                          bool exception_handling,
+                          Event* task_end_events = nullptr);
+  void PostDelayedTaskImp(std::function<void(void*)> task_func,
+                          void* task_param,
+                          int64_t wait_time,
+                          bool exception_handling,
+                          Event* task_end_events = nullptr);
+
   void AllocateWorker();
   void DeAllocateWorker();
   void Worker();
 
  private:
+  bool exception_handling_;
+
   uint16_t idle_thread_count_;
   uint16_t max_idle_thread_;
   uint16_t thread_count_;
@@ -104,6 +141,7 @@ class ThreadPool {
   Event events_;
   std::recursive_mutex lock_;
   std::thread worker_thread_;
+
 
   static ThreadPool* instance_;
 
