@@ -82,13 +82,14 @@ class IpcServer {
 
 #if defined(_WIN32)
   // Windows-specific members
-  void* windows_handle_;
+  void* wins_fd_;
 #else
   // Unix-specific members
   int unix_fd_;
-  void* unix_map_;
-  uint32_t unix_map_size_;
-#endif
+#endif  // end platform check
+
+  void* mem_map_;
+  uint32_t map_size_;
 
   SharedMemory* shared_memory_;
 

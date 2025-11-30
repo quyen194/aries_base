@@ -65,12 +65,12 @@ IpcServer::IpcServer()
     : server_name_(""),
       ipc_type_(IpcType::kUnknown),
 #if defined(_WIN32)
-      windows_handle_(nullptr),
+      wins_fd_(nullptr),
 #else
       unix_fd_(-1),
-      unix_map_(nullptr),
-      unix_map_size_(0),
-#endif
+#endif  // end platform check
+      mem_map_(nullptr),
+      map_size_(0),
       shared_memory_(nullptr),
       working_(false) {
   // initialize file-scope state if necessary
@@ -115,39 +115,69 @@ bool IpcServer::Create(uint32_t block_size, uint32_t block_count) {
     return false;
   }
 
+  // calculate required size
+  map_size_ = SharedMemory::MemorySizeNeeded(block_size, block_count);
+
 #if defined(_WIN32)
-  // Windows-specific disconnection logic would go here
+  // Windows-specific disconnection logic
+
+  // create file mapping
+  wins_fd_ = CreateFileMappingA(
+      INVALID_HANDLE_VALUE,
+      nullptr,
+      PAGE_READWRITE,
+      0,
+      map_size_,
+      server_name_.c_str());
+  if (wins_fd_ == nullptr) {
+    // Handle error
+    return false;
+  }
+
+  // map the shared memory region into the process address space
+  mem_map_ = MapViewOfFile(
+      wins_fd_,
+      FILE_MAP_ALL_ACCESS,
+      0,
+      0,
+      map_size_);
+  if (mem_map_ == nullptr) {
+    // mapping failed, cleanup
+    CloseHandle(wins_fd_);
+    wins_fd_ = nullptr;
+    return false;
+  }
 #else
   // Unix-specific disconnection logic
+
+  // remove existing shared memory segment if any
   shm_unlink(server_name_.c_str());
 
+  // create shared memory segment
   unix_fd_ = shm_open(server_name_.c_str(), O_CREAT | O_RDWR, 0666);
   if (unix_fd_ == -1) {
     // Handle error
     return false;
   }
 
-  // calculate required size
-  unix_map_size_ = sizeof(SharedMemory) + block_size * block_count;
-
   // Set size for the shared memory segment
-  ftruncate(unix_fd_, unix_map_size_);
+  ftruncate(unix_fd_, map_size_);
 
   // map the shared memory region into the process address space
-  unix_map_ = mmap(nullptr, unix_map_size_, PROT_READ | PROT_WRITE, MAP_SHARED, unix_fd_, 0);
-  if (unix_map_ == MAP_FAILED) {
+  mem_map_ = mmap(nullptr, map_size_, PROT_READ | PROT_WRITE, MAP_SHARED, unix_fd_, 0);
+  if (mem_map_ == MAP_FAILED) {
     // mapping failed, cleanup
     close(unix_fd_);
     unix_fd_ = -1;
     return false;
   }
+#endif  // end platform check
 
   // store mapping in file-scoped variables
-  shared_memory_ = reinterpret_cast<SharedMemory*>(unix_map_);
+  shared_memory_ = reinterpret_cast<SharedMemory*>(mem_map_);
 
   // zero the memory region
-  std::memset(unix_map_, 0, unix_map_size_);
-#endif  // end platform check
+  std::memset(mem_map_, 0, map_size_);
 
   // setup shared memory structure
   new (shared_memory_) SharedMemory(ipc_type_, block_size, block_count);
@@ -179,15 +209,30 @@ void IpcServer::Destroy() {
 
 void IpcServer::DestroyInternal() {
 #if defined(_WIN32)
-  // Windows-specific disconnection logic would go here
-#else
+  // Windows-specific disconnection logic
+
   // Unmap and cleanup shared memory
-  if (unix_map_ && unix_map_size_ > 0) {
-    munmap(unix_map_, unix_map_size_);
-    unix_map_ = nullptr;
-    unix_map_size_ = 0;
+  if (mem_map_) {
+    UnmapViewOfFile(mem_map_);
+    mem_map_ = nullptr;
   }
 
+  // Close file mapping handle
+  if (wins_fd_) {
+    CloseHandle(wins_fd_);
+    wins_fd_ = nullptr;
+  }
+#else
+  // Unix-specific disconnection logic
+
+  // Unmap and cleanup shared memory
+  if (mem_map_ && map_size_ > 0) {
+    munmap(mem_map_, map_size_);
+    mem_map_ = nullptr;
+    map_size_ = 0;
+  }
+
+  // Close shared memory segment
   if (unix_fd_ != -1) {
     close(unix_fd_);
     unix_fd_ = -1;

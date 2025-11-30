@@ -61,12 +61,12 @@ using namespace aries_base::process::utils;
 IpcClient::IpcClient()
     : server_name_(""),
 #if defined(_WIN32)
-      windows_handle_(nullptr),
+      wins_fd_(nullptr),
 #else
       unix_fd_(-1),
-      unix_map_(nullptr),
-      unix_map_size_(0),
-#endif
+#endif  // end platform check
+      mem_map_(nullptr),
+      map_size_(0),
       shared_memory_(nullptr) {}
 // -----------------------------------------------------------------------------
 
@@ -98,21 +98,52 @@ void IpcClient::SetNameEx(const std::string& name) {
 // -----------------------------------------------------------------------------
 
 bool IpcClient::Connect() {
+  if (server_name_.empty()) {
+    // server name not set
+    return false;
+  }
+
 #if defined(_WIN32)
-  // Windows-specific connection logic would go here
+  // Windows-specific connection logic
+
+  // open existing file mapping
+  wins_fd_ = OpenFileMappingA(
+      FILE_MAP_ALL_ACCESS,
+      FALSE,
+      server_name_.c_str());
+  if (wins_fd_ == nullptr) {
+    // Failed to open file mapping
+    return false;
+  }
+
+  // map the shared memory region into the process address space
+  mem_map_ = MapViewOfFile(
+      wins_fd_,
+      FILE_MAP_ALL_ACCESS,
+      0,
+      0,
+      0);
+  if (mem_map_ == nullptr) {
+    // mapping failed, cleanup
+    CloseHandle(wins_fd_);
+    wins_fd_ = nullptr;
+    return false;
+  }
 #else
   // Unix-specific connection logic
-  unix_fd_ = shm_open(server_name_.c_str(), O_RDWR, 0666);
+
+  // open existing shared memory segment
+  int unix_fd_ = shm_open(server_name_.c_str(), O_RDWR, 0666);
   if (unix_fd_ == -1) {
     // Failed to open shared memory
     return false;
   }
 
   // temporarily map to get size
-  unix_map_size_ = sizeof(SharedMemory);
+  uint32_t map_size = sizeof(SharedMemory);
   // map the shared memory region into the process address space
-  void* unix_map = mmap(nullptr, unix_map_size_, PROT_READ | PROT_WRITE, MAP_SHARED, unix_fd_, 0);
-  if (unix_map == MAP_FAILED) {
+  void* mem_map = mmap(nullptr, map_size, PROT_READ | PROT_WRITE, MAP_SHARED, unix_fd_, 0);
+  if (mem_map == MAP_FAILED) {
     // mapping failed, cleanup
     close(unix_fd_);
     unix_fd_ = -1;
@@ -120,43 +151,59 @@ bool IpcClient::Connect() {
   }
 
   // store mapping in file-scoped variables
-  SharedMemory* shared_memory = reinterpret_cast<SharedMemory*>(unix_map);
+  SharedMemory* shared_memory = reinterpret_cast<SharedMemory*>(mem_map);
 
   // calculate full size
-  unix_map_size_ = shared_memory->MemorySizeNeeded();
+  map_size_ = shared_memory->MemorySizeNeeded();
 
   // unmap temporary mapping
-  munmap(unix_map, sizeof(SharedMemory));
+  munmap(mem_map, sizeof(SharedMemory));
 
   // remap with full size
-  unix_map_ = mmap(nullptr, unix_map_size_, PROT_READ | PROT_WRITE, MAP_SHARED, unix_fd_, 0);
-  if (unix_map_ == MAP_FAILED) {
+  mem_map_ = mmap(nullptr, map_size_, PROT_READ | PROT_WRITE, MAP_SHARED, unix_fd_, 0);
+  if (mem_map_ == MAP_FAILED) {
     // mapping failed, cleanup
     close(unix_fd_);
     unix_fd_ = -1;
     return false;
   }
+#endif  // end platform check
 
   // store mapping in file-scoped variables
-  shared_memory_ = reinterpret_cast<SharedMemory*>(unix_map_);
-#endif
+  shared_memory_ = reinterpret_cast<SharedMemory*>(mem_map_);
 
   return true;
 }
 // -----------------------------------------------------------------------------
 
 void IpcClient::Disconnect() {
-#if defined(_WIN32)
-  // Windows-specific disconnection logic would go here
-#else
-  // Unix-specific disconnection logic
   shared_memory_ = nullptr;
 
-  if (unix_map_ && unix_map_size_ > 0) {
-    munmap(unix_map_, unix_map_size_);
-    unix_map_ = nullptr;
-    unix_map_size_ = 0;
+#if defined(_WIN32)
+  // Windows-specific disconnection logic
+
+  // Unmap and cleanup shared memory
+  if (mem_map_) {
+    UnmapViewOfFile(mem_map_);
+    mem_map_ = nullptr;
   }
+
+  // Close file mapping handle
+  if (wins_fd_) {
+    CloseHandle(wins_fd_);
+    wins_fd_ = nullptr;
+  }
+#else
+  // Unix-specific disconnection logic
+
+  // Unmap and cleanup shared memory
+  if (mem_map_ && map_size_ > 0) {
+    munmap(mem_map_, map_size_);
+    mem_map_ = nullptr;
+    map_size_ = 0;
+  }
+
+  // Close shared memory segment
   if (unix_fd_ != -1) {
     close(unix_fd_);
     unix_fd_ = -1;
