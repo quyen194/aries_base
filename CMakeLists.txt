@@ -18,6 +18,19 @@ aries_base_set_option(ARIES_BASE_BUILD_TESTS "Enable build tests" ON)
 # Print summary of configuration
 aries_base_print_summary()
 
+# FetchContent module for third-party dependencies
+include(FetchContent)
+
+# Add spdlog (Logging library)
+FetchContent_GetProperties(spdlog)
+if(NOT spdlog_POPULATED)
+    FetchContent_Declare(
+        spdlog
+        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/spdlog
+    )
+    FetchContent_MakeAvailable(spdlog)
+endif()
+
 # Add main library
 add_subdirectory(aries_base)
 

@@ -39,3 +39,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC Threads::Threads)
 if(NOT WIN32 AND NOT APPLE)
     target_link_libraries(${PROJECT_NAME} PUBLIC rt)
 endif()
+
+# Link spdlog
+target_link_libraries(${PROJECT_NAME} PUBLIC spdlog)
