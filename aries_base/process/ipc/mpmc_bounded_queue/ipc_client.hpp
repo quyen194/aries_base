@@ -55,7 +55,7 @@ class IpcClient {
   bool Connect();
   void Disconnect();
 
-  bool Enqueue(uint16_t msg_id, const void* data, size_t length, uint32_t timeout_ms = -1);
+  bool Enqueue(uint16_t msg_id, const void* data = nullptr, size_t length = 0, uint32_t timeout_ms = -1);
 
  private:
   std::string server_name_;

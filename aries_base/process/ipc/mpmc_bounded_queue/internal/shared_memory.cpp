@@ -189,7 +189,9 @@ bool SharedMemory::mpEnqueue(uint16_t msg_id,
           length = data_size_;  // truncate if data is too large
         }
         block.length = static_cast<uint32_t>(length);
-        std::memcpy(block.data, data, length);
+        if (data != nullptr && length > 0) {
+          std::memcpy(block.data, data, length);
+        }
 
         // mark block as ready to read
         block.sequence.store(write_pos + 1, std::memory_order_release);
@@ -243,7 +245,9 @@ bool SharedMemory::mcDequeue(uint16_t& msg_id,
         if (length > static_cast<uint32_t>(buffer_size)) {
           length = static_cast<uint32_t>(buffer_size);  // truncate if buffer is too small
         }
-        std::memcpy(buffer, block.data, length);
+        if (buffer != nullptr && length > 0) {
+          std::memcpy(buffer, block.data, length);
+        }
 
         // mark block as free for writing
         block.sequence.store(read_pos + block_count_, std::memory_order_release);
@@ -291,7 +295,9 @@ bool SharedMemory::spEnqueue(uint16_t msg_id,
         length = data_size_;  // truncate if data is too large
       }
       block.length = static_cast<uint32_t>(length);
-      std::memcpy(block.data, data, length);
+      if (data != nullptr && length > 0) {
+        std::memcpy(block.data, data, length);
+      }
 
       // mark block as ready to read
       block.sequence.store(write_pos + 1, std::memory_order_release);
@@ -342,7 +348,9 @@ bool SharedMemory::scDequeue(uint16_t& msg_id,
       if (length > static_cast<uint32_t>(buffer_size)) {
         length = static_cast<uint32_t>(buffer_size);  // truncate if buffer is too small
       }
-      std::memcpy(buffer, block.data, length);
+      if (buffer != nullptr && length > 0) {
+        std::memcpy(buffer, block.data, length);
+      }
 
       // mark block as free for writing
       block.sequence.store(read_pos + block_count_, std::memory_order_release);
