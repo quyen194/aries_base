@@ -9,9 +9,17 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 project("aries_base" LANGUAGES C CXX)
 
+# Add cmake modules path
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/macros.cmake")
 
 # Set default options
+aries_base_set_option(ARIES_DB_ENABLE_SQLITE "Enable SQLite support" ON)
+aries_base_set_option(ARIES_DB_ENABLE_MYSQL "Enable MySQL support" ON)
+aries_base_set_option(ARIES_DB_ENABLE_POSTGRES "Enable PostgreSQL support" ON)
+aries_base_set_option(ARIES_DB_ENABLE_MSSQL "Enable MSSQL support via ODBC" ON)
+
 aries_base_set_option(ARIES_BASE_BUILD_EXAMPLES "Enable build examples" ON)
 aries_base_set_option(ARIES_BASE_BUILD_TESTS "Enable build tests" ON)
 

@@ -12,6 +12,7 @@ file(GLOB_RECURSE SOURCE_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/*.cc"
     "${CMAKE_CURRENT_SOURCE_DIR}/*.c"
 )
+list(FILTER SOURCE_FILES EXCLUDE REGEX "${CMAKE_CURRENT_LIST_DIR}/database/")
 
 # Collect all header files
 file(GLOB_RECURSE HEADER_FILES
@@ -19,6 +20,7 @@ file(GLOB_RECURSE HEADER_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/*.hh"
     "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
 )
+list(FILTER HEADER_FILES EXCLUDE REGEX "${CMAKE_CURRENT_LIST_DIR}/database/")
 
 # Add source and header files to the library target
 target_sources(${PROJECT_NAME} PRIVATE
@@ -30,6 +32,9 @@ target_sources(${PROJECT_NAME} PRIVATE
 target_include_directories(${PROJECT_NAME} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../
 )
+
+# Include database library
+add_subdirectory(database)
 
 # Link pthreads if needed (required for std::thread)
 find_package(Threads REQUIRED)

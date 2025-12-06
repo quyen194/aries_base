@@ -108,7 +108,8 @@
 			"xutility": "cpp",
 			"queue": "cpp",
 			"filesystem": "cpp",
-			"shared_mutex": "cpp"
+			"shared_mutex": "cpp",
+			"expected": "cpp"
 		}
 	}
 }
