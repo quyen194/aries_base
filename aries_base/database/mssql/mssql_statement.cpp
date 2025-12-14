@@ -133,6 +133,13 @@ void MSSQLStatement::BindDouble(int index, double value) {
 // -----------------------------------------------------------------------------
 
 void MSSQLStatement::BindString(int index, const std::string& value) {
+  BindString(index, value, false);
+}
+// -----------------------------------------------------------------------------
+
+void MSSQLStatement::BindString(int index,
+                                const std::string& value,
+                                bool is_col_size_max) {
   if (index < 1 || index > static_cast<int>(bindings_.size())) {
     return;
   }
@@ -141,6 +148,30 @@ void MSSQLStatement::BindString(int index, const std::string& value) {
   data.type = BindData::Type::STRING;
   data.stringVal = value;
   data.indicator = SQL_NTS;
+  if (is_col_size_max) {
+    data.colSize = 0; // Indicate MAX size
+  } else {
+    data.colSize = static_cast<SQLULEN>(value.length());
+  }
+}
+// -----------------------------------------------------------------------------
+
+void MSSQLStatement::BindString(int index,
+                                const std::wstring& value,
+                                bool is_col_size_max) {
+  if (index < 1 || index > static_cast<int>(bindings_.size())) {
+    return;
+  }
+
+  BindData& data = bindings_[index - 1];
+  data.type = BindData::Type::WSTRING;
+  data.wstringVal = value;
+  data.indicator = SQL_NTS;
+  if (is_col_size_max) {
+    data.colSize = 0; // Indicate MAX size
+  } else {
+    data.colSize = static_cast<SQLULEN>(value.length());
+  }
 }
 // -----------------------------------------------------------------------------
 
@@ -155,16 +186,26 @@ void MSSQLStatement::BindNull(int index) {
 }
 // -----------------------------------------------------------------------------
 
-void MSSQLStatement::BindBlob(int index, const void* data, size_t size) {
+void MSSQLStatement::BindBlob(int index, const void* pdata, size_t size) {
+  BindBlob(index, pdata, size, false);
+}
+// -----------------------------------------------------------------------------
+
+void MSSQLStatement::BindBlob(int index, const void* pdata, size_t size, bool is_col_size_max) {
   if (index < 1 || index > static_cast<int>(bindings_.size())) {
     return;
   }
 
-  BindData& bindData = bindings_[index - 1];
-  bindData.type = BindData::Type::BLOB;
-  bindData.blobVal.assign(static_cast<const uint8_t*>(data),
-               static_cast<const uint8_t*>(data) + size);
-  bindData.indicator = size;
+  BindData& data = bindings_[index - 1];
+  data.type = BindData::Type::BLOB;
+  data.blobVal.assign(static_cast<const uint8_t*>(pdata),
+                          static_cast<const uint8_t*>(pdata) + size);
+  data.indicator = size;
+  if (is_col_size_max) {
+    data.colSize = 0; // Indicate MAX size
+  } else {
+    data.colSize = static_cast<SQLULEN>(size);
+  }
 }
 // -----------------------------------------------------------------------------
 
@@ -218,10 +259,22 @@ bool MSSQLStatement::Execute() {
                                SQL_PARAM_INPUT,
                                SQL_C_CHAR,
                                SQL_VARCHAR,
-                               data.stringVal.length(),
+                               data.colSize,
                                0,
                                (SQLPOINTER) data.stringVal.c_str(),
                                data.stringVal.length(),
+                               &data.indicator);
+        break;
+      case BindData::Type::WSTRING:
+        ret = SQLBindParameter(hstmt_,
+                               paramNum,
+                               SQL_PARAM_INPUT,
+                               SQL_C_WCHAR,
+                               SQL_WVARCHAR,
+                               data.colSize,
+                               0,
+                               (SQLPOINTER) data.wstringVal.c_str(),
+                               data.wstringVal.length(),
                                &data.indicator);
         break;
       case BindData::Type::BLOB:
@@ -230,7 +283,7 @@ bool MSSQLStatement::Execute() {
                                SQL_PARAM_INPUT,
                                SQL_C_BINARY,
                                SQL_VARBINARY,
-                               data.blobVal.size(),
+                               data.colSize,
                                0,
                                data.blobVal.data(),
                                data.blobVal.size(),

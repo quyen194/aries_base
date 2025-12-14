@@ -57,8 +57,11 @@ class MSSQLStatement : public Statement {
   void BindInt64(int index, int64_t value) override;
   void BindDouble(int index, double value) override;
   void BindString(int index, const std::string& value) override;
+  void BindString(int index, const std::string& value, bool is_col_size_max);
+  void BindString(int index, const std::wstring& value, bool is_col_size_max = false);
   void BindNull(int index) override;
   void BindBlob(int index, const void* data, size_t size) override;
+  void BindBlob(int index, const void* data, size_t size, bool is_col_size_max = false);
   bool Execute() override;
   std::unique_ptr<ResultSets> Query() override;
   void Reset() override;
@@ -70,14 +73,16 @@ class MSSQLStatement : public Statement {
 
  private:
   struct BindData {
-    enum class Type { INT, INT64, DOUBLE, STRING, BLOB, NULL_VAL };
+    enum class Type { INT, INT64, DOUBLE, STRING, WSTRING, BLOB, NULL_VAL };
     Type type;
     SQLLEN indicator;
     int intVal;
     int64_t int64Val;
     double doubleVal;
     std::string stringVal;
+    std::wstring wstringVal;
     std::vector<uint8_t> blobVal;
+    SQLULEN colSize;
   };
 
  private:
