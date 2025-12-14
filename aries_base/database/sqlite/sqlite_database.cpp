@@ -123,7 +123,7 @@ std::unique_ptr<ResultSets> SQLiteDatabase::Execute(const std::string& sql) {
     // Note: SQLiteResult will take ownership of stepping through the statement
     // We reset position so it can start from the beginning
     sqlite3_reset(stmt);
-    return std::make_unique<SQLiteResult>(stmt);
+    return std::make_unique<SQLiteResult>(stmt, true);
   } else {
     // Error
     last_error_ = sqlite3_errmsg(db_);

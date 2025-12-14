@@ -31,13 +31,18 @@ namespace sqlite {
 
 // -----------------------------------------------------------------------------
 
-SQLiteResult::SQLiteResult(sqlite3_stmt* stmt)
-    : stmt_(stmt), has_row_(false), owns_statement_(stmt != nullptr) {}
+SQLiteResult::SQLiteResult(sqlite3_stmt* stmt, bool owns_statement)
+    : stmt_(stmt),
+      has_row_(false),
+      owns_statement_(stmt != nullptr && owns_statement) {}
 // -----------------------------------------------------------------------------
 
 SQLiteResult::~SQLiteResult() {
-  // Note: We don't finalize the statement here because SQLiteStatement owns it
-  // However, if this was created from Execute(), the statement was already handled
+  if (owns_statement_) {
+    owns_statement_ = false;
+    sqlite3_finalize(stmt_);
+    stmt_ = nullptr;
+  }
 }
 // -----------------------------------------------------------------------------
 
@@ -55,6 +60,7 @@ bool SQLiteResult::Next() {
   } else if (rc == SQLITE_DONE) {
     has_row_ = false;
     if (owns_statement_) {
+      owns_statement_ = false;
       sqlite3_finalize(stmt_);
       stmt_ = nullptr;
     }

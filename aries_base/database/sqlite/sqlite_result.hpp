@@ -47,7 +47,7 @@ namespace sqlite {
  */
 class SQLiteResult : public ResultSets {
  public:
-  SQLiteResult(sqlite3_stmt* stmt);
+  SQLiteResult(sqlite3_stmt* stmt, bool owns_statement = false);
   ~SQLiteResult() override;
 
   // ResultSets interface
