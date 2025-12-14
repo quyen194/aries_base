@@ -65,9 +65,7 @@ MSSQLStatement::MSSQLStatement(SQLHDBC hdbc, const std::string& sql)
 // -----------------------------------------------------------------------------
 
 MSSQLStatement::~MSSQLStatement() {
-  if (hstmt_ != SQL_NULL_HSTMT) {
-    SQLFreeHandle(SQL_HANDLE_STMT, hstmt_);
-  }
+  Close();
 }
 // -----------------------------------------------------------------------------
 
@@ -343,6 +341,14 @@ void MSSQLStatement::ClearBindings() {
     binding.indicator = 0;
   }
   last_error_.clear();
+}
+// -----------------------------------------------------------------------------
+
+void MSSQLStatement::Close() {
+  if (hstmt_ != SQL_NULL_HSTMT) {
+    SQLFreeHandle(SQL_HANDLE_STMT, hstmt_);
+    hstmt_ = SQL_NULL_HSTMT;
+  }
 }
 // -----------------------------------------------------------------------------
 

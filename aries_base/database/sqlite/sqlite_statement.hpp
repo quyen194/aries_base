@@ -62,6 +62,7 @@ class SQLiteStatement : public Statement {
   std::unique_ptr<ResultSets> Query() override;
   void Reset() override;
   void ClearBindings() override;
+  void Close() override;
   std::string GetLastError() const override;
 
  private:

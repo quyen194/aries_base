@@ -60,9 +60,7 @@ MySQLStatement::MySQLStatement(MYSQL* mysql, const std::string& sql)
 // -----------------------------------------------------------------------------
 
 MySQLStatement::~MySQLStatement() {
-  if (stmt_) {
-    mysql_stmt_close(stmt_);
-  }
+  Close();
 }
 // -----------------------------------------------------------------------------
 
@@ -191,6 +189,14 @@ void MySQLStatement::ClearBindings() {
   bindings_.clear();
   memset(mysql_binds_.data(), 0, sizeof(MYSQL_BIND) * mysql_binds_.size());
   last_error_.clear();
+}
+// -----------------------------------------------------------------------------
+
+void MySQLStatement::Close() {
+  if (stmt_) {
+    mysql_stmt_close(stmt_);
+    stmt_ = nullptr;
+  }
 }
 // -----------------------------------------------------------------------------
 

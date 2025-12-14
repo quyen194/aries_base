@@ -111,6 +111,11 @@ class Statement {
   virtual void ClearBindings() = 0;
 
   /**
+   * @brief Close the prepared statement and release resources
+   */
+  virtual void Close() = 0;
+
+  /**
    * @brief Get the last error message
    * @return Error message string
    */

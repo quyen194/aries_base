@@ -63,13 +63,7 @@ PostgresStatement::PostgresStatement(PGconn* conn, const std::string& sql)
 // -----------------------------------------------------------------------------
 
 PostgresStatement::~PostgresStatement() {
-  if (prepared_) {
-    std::string sql = "DEALLOCATE " + stmt_name_;
-    PGresult* result = PQexec(conn_, sql.c_str());
-    if (result) {
-      PQclear(result);
-    }
-  }
+  Close();
 }
 // -----------------------------------------------------------------------------
 
@@ -235,6 +229,18 @@ void PostgresStatement::Reset() {
 
 void PostgresStatement::ClearBindings() {
   Reset();
+}
+// -----------------------------------------------------------------------------
+
+void PostgresStatement::Close() {
+  if (prepared_) {
+    std::string sql = "DEALLOCATE " + stmt_name_;
+    PGresult* result = PQexec(conn_, sql.c_str());
+    if (result) {
+      PQclear(result);
+    }
+    prepared_ = false;
+  }
 }
 // -----------------------------------------------------------------------------
 

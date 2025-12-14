@@ -46,9 +46,7 @@ SQLiteStatement::SQLiteStatement(sqlite3* db, const std::string& sql)
 // -----------------------------------------------------------------------------
 
 SQLiteStatement::~SQLiteStatement() {
-  if (stmt_) {
-    sqlite3_finalize(stmt_);
-  }
+  Close();
 }
 // -----------------------------------------------------------------------------
 
@@ -142,6 +140,14 @@ void SQLiteStatement::Reset() {
 void SQLiteStatement::ClearBindings() {
   sqlite3_clear_bindings(stmt_);
   last_error_.clear();
+}
+// -----------------------------------------------------------------------------
+
+void SQLiteStatement::Close() {
+  if (stmt_) {
+    sqlite3_finalize(stmt_);
+    stmt_ = nullptr;
+  }
 }
 // -----------------------------------------------------------------------------
 
