@@ -23,6 +23,10 @@
 #include <string>
 
 #include "aries_base/database/interfaces/database.hpp"
+#include "aries_base/database/mssql/mssql_database.hpp"
+#include "aries_base/database/mysql/mysql_database.hpp"
+#include "aries_base/database/postgres/postgres_database.hpp"
+#include "aries_base/database/sqlite/sqlite_database.hpp"
 // -----------------------------------------------------------------------------
 
 
@@ -32,6 +36,13 @@ namespace aries_base {
 
 // -----------------------------------------------------------------------------
 namespace database {
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+using namespace mssql;
+using namespace mysql;
+using namespace postgres;
+using namespace sqlite;
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
@@ -65,6 +76,102 @@ class DatabaseFactory {
    * @endcode
    */
   static std::unique_ptr<Database> Create(DBType type);
+
+  /**
+   * @brief Convert a generic Database pointer to a MySQLDatabase pointer
+   * @param db Unique pointer to a Database instance
+   * @return Unique pointer to a MySQLDatabase instance
+   * @throws std::runtime_error if the conversion fails
+   */
+  static std::unique_ptr<MSSQLDatabase> ToMSSQL(std::unique_ptr<Database>& db);
+
+  /**
+   * @brief Convert a generic Database pointer to a MySQLDatabase pointer
+   * @param db Unique pointer to a Database instance
+   * @return Unique pointer to a MySQLDatabase instance
+   * @throws std::runtime_error if the conversion fails
+   */
+  static std::unique_ptr<MySQLDatabase> ToMySQL(std::unique_ptr<Database>& db);
+
+  /**
+   * @brief Convert a generic Database pointer to a PostgresDatabase pointer
+   * @param db Unique pointer to a Database instance
+   * @return Unique pointer to a PostgresDatabase instance
+   * @throws std::runtime_error if the conversion fails
+   */
+  static std::unique_ptr<PostgresDatabase> ToPostgres(std::unique_ptr<Database>& db);
+
+  /**
+   * @brief Convert a generic Database pointer to a SQLiteDatabase pointer
+   * @param db Unique pointer to a Database instance
+   * @return Unique pointer to a SQLiteDatabase instance
+   * @throws std::runtime_error if the conversion fails
+   */
+  static std::unique_ptr<SQLiteDatabase> ToSQLite(std::unique_ptr<Database>& db);
+
+  /**
+   * @brief Convert a generic Statement pointer to a MSSQLStatement pointer
+   * @param stmt Unique pointer to a Statement instance
+   * @return Unique pointer to a MSSQLStatement instance
+   * @throws std::runtime_error if the conversion fails
+   */
+  static std::unique_ptr<MSSQLStatement> ToMSSQL(std::unique_ptr<Statement>& stmt);
+
+  /**
+   * @brief Convert a generic Statement pointer to a MySQLStatement pointer
+   * @param stmt Unique pointer to a Statement instance
+   * @return Unique pointer to a MySQLStatement instance
+   * @throws std::runtime_error if the conversion fails
+   */
+  static std::unique_ptr<MySQLStatement> ToMySQL(std::unique_ptr<Statement>& stmt);
+
+  /**
+   * @brief Convert a generic Statement pointer to a PostgresStatement pointer
+   * @param stmt Unique pointer to a Statement instance
+   * @return Unique pointer to a PostgresStatement instance
+   * @throws std::runtime_error if the conversion fails
+   */
+  static std::unique_ptr<PostgresStatement> ToPostgres(std::unique_ptr<Statement>& stmt);
+
+  /**
+   * @brief Convert a generic Statement pointer to a SQLiteStatement pointer
+   * @param stmt Unique pointer to a Statement instance
+   * @return Unique pointer to a SQLiteStatement instance
+   * @throws std::runtime_error if the conversion fails
+   */
+  static std::unique_ptr<SQLiteStatement> ToSQLite(std::unique_ptr<Statement>& stmt);
+
+  /**
+   * @brief Convert a generic ResultSets pointer to a MSSQLResult pointer
+   * @param result Unique pointer to a ResultSets instance
+   * @return Unique pointer to a MSSQLResult instance
+   * @throws std::runtime_error if the conversion fails
+   */
+  static std::unique_ptr<MSSQLResult> ToMSSQL(std::unique_ptr<ResultSets>& result);
+
+  /**
+   * @brief Convert a generic ResultSets pointer to a MySQLResult pointer
+   * @param result Unique pointer to a ResultSets instance
+   * @return Unique pointer to a MySQLResult instance
+   * @throws std::runtime_error if the conversion fails
+   */
+  static std::unique_ptr<MySQLResult> ToMySQL(std::unique_ptr<ResultSets>& result);
+
+  /**
+   * @brief Convert a generic ResultSets pointer to a PostgresResult pointer
+   * @param result Unique pointer to a ResultSets instance
+   * @return Unique pointer to a PostgresResult instance
+   * @throws std::runtime_error if the conversion fails
+   */
+  static std::unique_ptr<PostgresResult> ToPostgres(std::unique_ptr<ResultSets>& result);
+
+  /**
+   * @brief Convert a generic ResultSets pointer to a SQLiteResult pointer
+   * @param result Unique pointer to a ResultSets instance
+   * @return Unique pointer to a SQLiteResult instance
+   * @throws std::runtime_error if the conversion fails
+   */
+  static std::unique_ptr<SQLiteResult> ToSQLite(std::unique_ptr<ResultSets>& result);
 
   /**
    * @brief Get the name of a database type
