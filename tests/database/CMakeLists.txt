@@ -6,6 +6,11 @@ if(NOT ARIES_DB_ENABLED)
     return()
 endif()
 
+# Include MSSQL tests if MSSQL support is enabled
+if(ARIES_DB_ENABLE_MSSQL AND ARIES_DB_MSSQL_ENABLED)
+    add_subdirectory(mssql)
+endif()
+
 # Include MySQL tests if MySQL support is enabled
 if(ARIES_DB_ENABLE_MYSQL AND ARIES_DB_MYSQL_ENABLED)
     add_subdirectory(mysql)
