@@ -14,19 +14,20 @@ if(ARIES_DB_ENABLE_SQLITE)
     if(SQLite3_FOUND)
         message(STATUS "SQLite found: ${SQLite3_VERSION}")
         file(GLOB_RECURSE SQLITE_SOURCE_FILES
-            "${CMAKE_CURRENT_LIST_DIR}/sqlite/*.c"
-            "${CMAKE_CURRENT_LIST_DIR}/sqlite/*.cc"
-            "${CMAKE_CURRENT_LIST_DIR}/sqlite/*.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/sqlite/*.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/sqlite/*.cc"
+            "${CMAKE_CURRENT_SOURCE_DIR}/sqlite/*.c"
         )
         file(GLOB_RECURSE SQLITE_HEADER_FILES
-            "${CMAKE_CURRENT_LIST_DIR}/sqlite/*.h"
-            "${CMAKE_CURRENT_LIST_DIR}/sqlite/*.hh"
-            "${CMAKE_CURRENT_LIST_DIR}/sqlite/*.hpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/sqlite/*.hpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/sqlite/*.hh"
+            "${CMAKE_CURRENT_SOURCE_DIR}/sqlite/*.h"
         )
         list(APPEND DATABASE_SOURCES ${SQLITE_SOURCE_FILES})
         list(APPEND DATABASE_HEADERS ${SQLITE_HEADER_FILES})
         list(APPEND DATABASE_LIBS SQLite::SQLite3)
         list(APPEND DATABASE_DEFINITIONS ARIES_DB_SQLITE)
+        set(ARIES_DB_SQLITE_ENABLED TRUE CACHE BOOL "Aries DB SQLite Enabled")
     else()
         message(WARNING "SQLite not found. SQLite support will be disabled.")
     endif()
@@ -42,19 +43,20 @@ if(ARIES_DB_ENABLE_MYSQL)
         if(unofficial-libmysql_FOUND)
             message(STATUS "MySQL found")
             file(GLOB_RECURSE MYSQL_SOURCE_FILES
-                "${CMAKE_CURRENT_LIST_DIR}/mysql/*.c"
-                "${CMAKE_CURRENT_LIST_DIR}/mysql/*.cc"
-                "${CMAKE_CURRENT_LIST_DIR}/mysql/*.cpp"
+                "${CMAKE_CURRENT_SOURCE_DIR}/mysql/*.cpp"
+                "${CMAKE_CURRENT_SOURCE_DIR}/mysql/*.cc"
+                "${CMAKE_CURRENT_SOURCE_DIR}/mysql/*.c"
             )
             file(GLOB_RECURSE MYSQL_HEADER_FILES
-                "${CMAKE_CURRENT_LIST_DIR}/mysql/*.h"
-                "${CMAKE_CURRENT_LIST_DIR}/mysql/*.hh"
-                "${CMAKE_CURRENT_LIST_DIR}/mysql/*.hpp"
+                "${CMAKE_CURRENT_SOURCE_DIR}/mysql/*.hpp"
+                "${CMAKE_CURRENT_SOURCE_DIR}/mysql/*.hh"
+                "${CMAKE_CURRENT_SOURCE_DIR}/mysql/*.h"
             )
             list(APPEND DATABASE_SOURCES ${MYSQL_SOURCE_FILES})
             list(APPEND DATABASE_HEADERS ${MYSQL_HEADER_FILES})
             list(APPEND DATABASE_LIBS unofficial::libmysql::libmysql)
             list(APPEND DATABASE_DEFINITIONS ARIES_DB_MYSQL)
+            set(ARIES_DB_MYSQL_ENABLED TRUE CACHE BOOL "Aries DB MySQL Enabled")
         else()
             message(WARNING "MySQL not found. MySQL support will be disabled.")
         endif()
@@ -64,19 +66,20 @@ if(ARIES_DB_ENABLE_MYSQL)
         if(MYSQL_FOUND)
             message(STATUS "MySQL found: ${MYSQL_VERSION}")
             file(GLOB_RECURSE MYSQL_SOURCE_FILES
-                "${CMAKE_CURRENT_LIST_DIR}/mysql/*.c"
-                "${CMAKE_CURRENT_LIST_DIR}/mysql/*.cc"
-                "${CMAKE_CURRENT_LIST_DIR}/mysql/*.cpp"
+                "${CMAKE_CURRENT_SOURCE_DIR}/mysql/*.cpp"
+                "${CMAKE_CURRENT_SOURCE_DIR}/mysql/*.cc"
+                "${CMAKE_CURRENT_SOURCE_DIR}/mysql/*.c"
             )
             file(GLOB_RECURSE MYSQL_HEADER_FILES
-                "${CMAKE_CURRENT_LIST_DIR}/mysql/*.h"
-                "${CMAKE_CURRENT_LIST_DIR}/mysql/*.hh"
-                "${CMAKE_CURRENT_LIST_DIR}/mysql/*.hpp"
+                "${CMAKE_CURRENT_SOURCE_DIR}/mysql/*.hpp"
+                "${CMAKE_CURRENT_SOURCE_DIR}/mysql/*.hh"
+                "${CMAKE_CURRENT_SOURCE_DIR}/mysql/*.h"
             )
             list(APPEND DATABASE_SOURCES ${MYSQL_SOURCE_FILES})
             list(APPEND DATABASE_HEADERS ${MYSQL_HEADER_FILES})
             list(APPEND DATABASE_LIBS ${MYSQL_LIBRARIES})
             list(APPEND DATABASE_DEFINITIONS ARIES_DB_MYSQL)
+            set(ARIES_DB_MYSQL_ENABLED TRUE CACHE BOOL "Aries DB MySQL Enabled")
         else()
             message(WARNING "MySQL not found. MySQL support will be disabled.")
         endif()
@@ -91,19 +94,20 @@ if(ARIES_DB_ENABLE_POSTGRES)
     if(PostgreSQL_FOUND)
         message(STATUS "PostgreSQL found: ${PostgreSQL_VERSION_STRING}")
         file(GLOB_RECURSE POSTGRES_SOURCE_FILES
-            "${CMAKE_CURRENT_LIST_DIR}/postgres/*.c"
-            "${CMAKE_CURRENT_LIST_DIR}/postgres/*.cc"
-            "${CMAKE_CURRENT_LIST_DIR}/postgres/*.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/postgres/*.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/postgres/*.cc"
+            "${CMAKE_CURRENT_SOURCE_DIR}/postgres/*.c"
         )
         file(GLOB_RECURSE POSTGRES_HEADER_FILES
-            "${CMAKE_CURRENT_LIST_DIR}/postgres/*.h"
-            "${CMAKE_CURRENT_LIST_DIR}/postgres/*.hh"
-            "${CMAKE_CURRENT_LIST_DIR}/postgres/*.hpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/postgres/*.hpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/postgres/*.hh"
+            "${CMAKE_CURRENT_SOURCE_DIR}/postgres/*.h"
         )
         list(APPEND DATABASE_SOURCES ${POSTGRES_SOURCE_FILES})
         list(APPEND DATABASE_HEADERS ${POSTGRES_HEADER_FILES})
         list(APPEND DATABASE_LIBS PostgreSQL::PostgreSQL)
         list(APPEND DATABASE_DEFINITIONS ARIES_DB_POSTGRES)
+        set(ARIES_DB_POSTGRES_ENABLED TRUE CACHE BOOL "Aries DB PostgreSQL Enabled")
     else()
         message(WARNING "PostgreSQL not found. PostgreSQL support will be disabled.")
     endif()
@@ -117,14 +121,14 @@ if(ARIES_DB_ENABLE_MSSQL)
     if(ODBC_FOUND)
         message(STATUS "ODBC found")
         file(GLOB_RECURSE MSSQL_SOURCE_FILES
-            "${CMAKE_CURRENT_LIST_DIR}/mssql/*.c"
-            "${CMAKE_CURRENT_LIST_DIR}/mssql/*.cc"
-            "${CMAKE_CURRENT_LIST_DIR}/mssql/*.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/mssql/*.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/mssql/*.cc"
+            "${CMAKE_CURRENT_SOURCE_DIR}/mssql/*.c"
         )
         file(GLOB_RECURSE MSSQL_HEADER_FILES
-            "${CMAKE_CURRENT_LIST_DIR}/mssql/*.h"
-            "${CMAKE_CURRENT_LIST_DIR}/mssql/*.hh"
-            "${CMAKE_CURRENT_LIST_DIR}/mssql/*.hpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/mssql/*.hpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/mssql/*.hh"
+            "${CMAKE_CURRENT_SOURCE_DIR}/mssql/*.h"
         )
         list(APPEND DATABASE_SOURCES ${MSSQL_SOURCE_FILES})
         list(APPEND DATABASE_HEADERS ${MSSQL_HEADER_FILES})
@@ -134,6 +138,7 @@ if(ARIES_DB_ENABLE_MSSQL)
             list(APPEND DATABASE_LIBS ODBC::ODBC)
         endif()
         list(APPEND DATABASE_DEFINITIONS ARIES_DB_MSSQL)
+        set(ARIES_DB_MSSQL_ENABLED TRUE CACHE BOOL "Aries DB MSSQL Enabled")
     else()
         message(WARNING "ODBC not found. MSSQL support will be disabled.")
     endif()
@@ -145,14 +150,14 @@ endif()
 if(DATABASE_SOURCES)
     # Database source files
     list(APPEND DATABASE_SOURCES
-        "${CMAKE_CURRENT_LIST_DIR}/db_factory.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/db_factory.cpp"
     )
 
     list(APPEND DATABASE_HEADERS
-        "${CMAKE_CURRENT_LIST_DIR}/db_factory.hpp"
-        "${CMAKE_CURRENT_LIST_DIR}/interfaces/database.hpp"
-        "${CMAKE_CURRENT_LIST_DIR}/interfaces/statement.hpp"
-        "${CMAKE_CURRENT_LIST_DIR}/interfaces/result_sets.hpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/db_factory.hpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/interfaces/database.hpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/interfaces/statement.hpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/interfaces/result_sets.hpp"
     )
 
     # Add database sources to aries_base library
