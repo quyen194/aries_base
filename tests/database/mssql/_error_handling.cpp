@@ -127,9 +127,9 @@ void test_large_data() {
     // Create 1MB string
     std::string largeString(1024 * 1024, 'X');
 
-    auto pstmt = db->Prepare("INSERT INTO large_data (id, content) VALUES (?, ?)");
-    assert(pstmt != nullptr);
-    std::unique_ptr<MSSQLStatement> stmt = std::unique_ptr<MSSQLStatement>(static_cast<MSSQLStatement*>(pstmt.release()));
+    auto base_stmt = db->Prepare("INSERT INTO large_data (id, content) VALUES (?, ?)");
+    assert(base_stmt != nullptr);
+    auto stmt = DatabaseFactory::ToMSSQL(base_stmt);
     stmt->BindInt64(1, 1);
     stmt->BindBlob(2, largeString.data(), largeString.size(), true);
     assert(stmt->Execute());
