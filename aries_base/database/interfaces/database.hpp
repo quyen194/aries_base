@@ -55,7 +55,7 @@ class Database {
    * - SQLite: "path/to/database.db" or ":memory:"
    * - MySQL: "host=127.0.0.1;port=3306;user=root;password=pass;database=mydb"
    * - PostgreSQL: "host=127.0.0.1;port=5432;user=postgres;password=pass;dbname=mydb"
-   * - MSSQL: "Driver={ODBC Driver 17 for SQL Server};Server=127.0.0.1;Database=mydb;UID=sa;PWD=pass"
+   * - MSSQL: "Driver={ODBC Driver 17 for SQL Server};Server=127.0.0.1;UID=sa;PWD=pass;Database=mydb;"
    */
   virtual bool Connect(const std::string& connectionString) = 0;
 
