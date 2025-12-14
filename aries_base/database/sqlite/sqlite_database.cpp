@@ -120,6 +120,9 @@ std::unique_ptr<ResultSets> SQLiteDatabase::Execute(const std::string& sql) {
   } else if (rc == SQLITE_ROW) {
     // Has results (SELECT)
     last_error_.clear();
+    // Note: SQLiteResult will take ownership of stepping through the statement
+    // We reset position so it can start from the beginning
+    sqlite3_reset(stmt);
     return std::make_unique<SQLiteResult>(stmt);
   } else {
     // Error
