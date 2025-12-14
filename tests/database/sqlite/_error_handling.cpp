@@ -6,9 +6,9 @@
   email:     quyen19492@gmail.com
 
   created:   2025/12/07 07:41
-  filename:  aries_base/tests/database/_error_handling.cpp
+  filename:  aries_base/tests/database/sqlite/error_handling.cpp
 
-  purpose:   Error handling tests using CTest
+  purpose:   Error scenarios and edge cases tests for SQLite database
 *********************************************************************/
 
 
@@ -18,9 +18,11 @@
 #endif  // _WIN32
 
 #include <cassert>
+#include <filesystem>
 #include <iostream>
 
 #include <aries_base/database/db_factory.hpp>
+#include "tests/database/sqlite/_settings.hpp"
 // -----------------------------------------------------------------------------
 
 
@@ -28,13 +30,20 @@
 using namespace aries_base::database;
 // -----------------------------------------------------------------------------
 
+// -----------------------------------------------------------------------------
 
+void test_setup() {
+  // Remove existing test database file if any
+  if (DB_TYPE == DBType::SQLite && CONNECTION_STRING == CONNECTION_STRING_SQLITE_FILE) {
+    std::filesystem::remove(CONNECTION_STRING_SQLITE_FILE);
+  }
+}
 // -----------------------------------------------------------------------------
 
 void test_invalid_sql() {
   try {
-    auto db = DatabaseFactory::Create(DBType::SQLite);
-    assert(db->Connect(":memory:"));
+    auto db = DatabaseFactory::Create(DB_TYPE);
+    assert(db->Connect(CONNECTION_STRING));
 
     // Invalid SQL should return nullptr
     auto result = db->Execute("SELECT * FROM nonexistent_table");
@@ -54,14 +63,15 @@ void test_invalid_sql() {
 
 void test_null_handling() {
   try {
-    auto db = DatabaseFactory::Create(DBType::SQLite);
-    assert(db->Connect(":memory:"));
+    auto db = DatabaseFactory::Create(DB_TYPE);
+    assert(db->Connect(CONNECTION_STRING));
 
     assert(db->Execute("CREATE TABLE nullable_test (id INTEGER, data TEXT)") != nullptr);
     assert(db->Execute("INSERT INTO nullable_test VALUES (1, NULL)") != nullptr);
 
     auto result = db->Execute("SELECT data FROM nullable_test WHERE id = 1");
-    assert(result != nullptr && result->Next());
+    assert(result != nullptr);
+    assert(result->Next());
     assert(result->IsNull(0));
 
     db->Disconnect();
@@ -75,8 +85,8 @@ void test_null_handling() {
 
 void test_constraint_violation() {
   try {
-    auto db = DatabaseFactory::Create(DBType::SQLite);
-    assert(db->Connect(":memory:"));
+    auto db = DatabaseFactory::Create(DB_TYPE);
+    assert(db->Connect(CONNECTION_STRING));
 
     assert(db->Execute("CREATE TABLE unique_test (id INTEGER PRIMARY KEY, code TEXT UNIQUE)") != nullptr);
     assert(db->Execute("INSERT INTO unique_test VALUES (1, 'ABC123')") != nullptr);
@@ -99,21 +109,23 @@ void test_constraint_violation() {
 
 void test_large_data() {
   try {
-    auto db = DatabaseFactory::Create(DBType::SQLite);
-    assert(db->Connect(":memory:"));
+    auto db = DatabaseFactory::Create(DB_TYPE);
+    assert(db->Connect(CONNECTION_STRING));
 
     assert(db->Execute("CREATE TABLE large_data (id INTEGER, content TEXT)") != nullptr);
 
     // Create 1MB string
     std::string largeString(1024 * 1024, 'X');
 
-    auto stmt = db->Prepare("INSERT INTO large_data (content) VALUES (?)");
+    auto stmt = db->Prepare("INSERT INTO large_data (id, content) VALUES (?, ?)");
     assert(stmt != nullptr);
-    stmt->BindString(1, largeString);
+    stmt->BindInt64(1, 1);
+    stmt->BindString(2, largeString);
     assert(stmt->Execute());
 
     auto result = db->Execute("SELECT LENGTH(content) FROM large_data WHERE id = 1");
-    assert(result != nullptr && result->Next());
+    assert(result != nullptr);
+    assert(result->Next());
     assert(result->GetInt(0) == 1024 * 1024);
 
     db->Disconnect();
@@ -128,6 +140,7 @@ void test_large_data() {
 int main() {
   std::cout << "=== Database Error Handling Tests ===\n\n";
 
+  test_setup();
   test_invalid_sql();
   test_null_handling();
   test_constraint_violation();

@@ -6,9 +6,9 @@
   email:     quyen19492@gmail.com
 
   created:   2025/12/07 07:38
-  filename:  aries_base/tests/database/_basic.cpp
+  filename:  aries_base/tests/database/sqlite/basic.cpp
 
-  purpose:   Basic database functionality tests using CTest
+  purpose:   Connection and basic queries tests for SQLite database
 *********************************************************************/
 
 
@@ -18,9 +18,12 @@
 #endif  // _WIN32
 
 #include <cassert>
+#include <filesystem>
 #include <iostream>
+#include <string>
 
 #include <aries_base/database/db_factory.hpp>
+#include "tests/database/sqlite/_settings.hpp"
 // -----------------------------------------------------------------------------
 
 
@@ -30,15 +33,23 @@ using namespace aries_base::database;
 
 // -----------------------------------------------------------------------------
 
-void test_sqlite_connection() {
+void test_setup() {
+  // Remove existing test database file if any
+  if (DB_TYPE == DBType::SQLite && CONNECTION_STRING == CONNECTION_STRING_SQLITE_FILE) {
+    std::filesystem::remove(CONNECTION_STRING_SQLITE_FILE);
+  }
+}
+// -----------------------------------------------------------------------------
+
+void test_sql_connection() {
   try {
-    auto db = DatabaseFactory::Create(DBType::SQLite);
+    auto db = DatabaseFactory::Create(DB_TYPE);
     assert(db != nullptr);
-    assert(db->Connect(":memory:"));
+    assert(db->Connect(CONNECTION_STRING));
     db->Disconnect();
-    std::cout << "✓ SQLite connection test passed\n";
+    std::cout << "✓ Connection test passed\n";
   } catch (const std::exception& e) {
-    std::cerr << "✗ SQLite connection test failed: " << e.what() << "\n";
+    std::cerr << "✗ Connection test failed: " << e.what() << "\n";
     assert(false);
   }
 }
@@ -46,8 +57,10 @@ void test_sqlite_connection() {
 
 void test_query_execution() {
   try {
-    auto db = DatabaseFactory::Create(DBType::SQLite);
-    assert(db->Connect(":memory:"));
+    auto db = DatabaseFactory::Create(DB_TYPE);
+    assert(db->Connect(CONNECTION_STRING));
+
+    assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
 
     assert(db->Execute("CREATE TABLE test (id INTEGER, name TEXT)") != nullptr);
     assert(db->Execute("INSERT INTO test VALUES (1, 'test')") != nullptr);
@@ -69,14 +82,17 @@ void test_query_execution() {
 
 void test_column_type_retrieval() {
   try {
-    auto db = DatabaseFactory::Create(DBType::SQLite);
-    assert(db->Connect(":memory:"));
+    auto db = DatabaseFactory::Create(DB_TYPE);
+    assert(db->Connect(CONNECTION_STRING));
+
+    assert(db->Execute("DROP TABLE IF EXISTS types_test") != nullptr);
 
     assert(db->Execute("CREATE TABLE types_test (id INTEGER, price REAL, name TEXT)") != nullptr);
     assert(db->Execute("INSERT INTO types_test VALUES (42, 3.14, 'item')") != nullptr);
 
     auto result = db->Execute("SELECT * FROM types_test");
-    assert(result != nullptr && result->Next());
+    assert(result != nullptr);
+    assert(result->Next());
 
     assert(result->GetInt(0) == 42);
     assert(result->GetDouble(1) > 3.13 && result->GetDouble(1) < 3.15);
@@ -94,7 +110,8 @@ void test_column_type_retrieval() {
 int main() {
   std::cout << "=== Database Basic Tests ===\n\n";
 
-  test_sqlite_connection();
+  test_setup();
+  test_sql_connection();
   test_query_execution();
   test_column_type_retrieval();
 

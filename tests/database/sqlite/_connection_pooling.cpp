@@ -6,9 +6,9 @@
   email:     quyen19492@gmail.com
 
   created:   2025/12/07 07:40
-  filename:  aries_base/tests/database/_connection_pooling.cpp
+  filename:  aries_base/tests/database/sqlite/connection_pooling.cpp
 
-  purpose:   Connection reuse and resource management tests using CTest
+  purpose:   Resource management and concurrency tests for SQLite database
 *********************************************************************/
 
 
@@ -18,10 +18,12 @@
 #endif  // _WIN32
 
 #include <cassert>
+#include <filesystem>
 #include <iostream>
 #include <string>
 
 #include <aries_base/database/db_factory.hpp>
+#include "tests/database/sqlite/_settings.hpp"
 // -----------------------------------------------------------------------------
 
 
@@ -31,10 +33,20 @@ using namespace aries_base::database;
 
 // -----------------------------------------------------------------------------
 
+void test_setup() {
+  // Remove existing test database file if any
+  if (DB_TYPE == DBType::SQLite && CONNECTION_STRING == CONNECTION_STRING_SQLITE_FILE) {
+    std::filesystem::remove(CONNECTION_STRING_SQLITE_FILE);
+  }
+}
+// -----------------------------------------------------------------------------
+
 void test_single_connection_reuse() {
   try {
-    auto db = DatabaseFactory::Create(DBType::SQLite);
-    assert(db->Connect(":memory:"));
+    auto db = DatabaseFactory::Create(DB_TYPE);
+    assert(db->Connect(CONNECTION_STRING));
+
+    assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
 
     // Execute multiple operations on same connection
     assert(db->Execute("CREATE TABLE test (id INTEGER, value TEXT)") != nullptr);
@@ -42,7 +54,8 @@ void test_single_connection_reuse() {
     assert(db->Execute("INSERT INTO test VALUES (2, 'second')") != nullptr);
 
     auto result = db->Execute("SELECT COUNT(*) FROM test");
-    assert(result != nullptr && result->Next());
+    assert(result != nullptr);
+    assert(result->Next());
     assert(result->GetInt(0) == 2);
 
     db->Disconnect();
@@ -56,8 +69,10 @@ void test_single_connection_reuse() {
 
 void test_statement_reset_reuse() {
   try {
-    auto db = DatabaseFactory::Create(DBType::SQLite);
-    assert(db->Connect(":memory:"));
+    auto db = DatabaseFactory::Create(DB_TYPE);
+    assert(db->Connect(CONNECTION_STRING));
+
+    assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
 
     assert(db->Execute("CREATE TABLE test (id INTEGER PRIMARY KEY, value TEXT)") != nullptr);
 
@@ -72,7 +87,8 @@ void test_statement_reset_reuse() {
     }
 
     auto result = db->Execute("SELECT COUNT(*) FROM test");
-    assert(result != nullptr && result->Next());
+    assert(result != nullptr);
+    assert(result->Next());
     assert(result->GetInt(0) == 10);
 
     db->Disconnect();
@@ -86,8 +102,10 @@ void test_statement_reset_reuse() {
 
 void test_batch_operation() {
   try {
-    auto db = DatabaseFactory::Create(DBType::SQLite);
-    assert(db->Connect(":memory:"));
+    auto db = DatabaseFactory::Create(DB_TYPE);
+    assert(db->Connect(CONNECTION_STRING));
+
+    assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
 
     assert(db->Execute("CREATE TABLE test (id INTEGER PRIMARY KEY, value INTEGER)") != nullptr);
 
@@ -102,7 +120,8 @@ void test_batch_operation() {
     }
 
     auto result = db->Execute("SELECT COUNT(*) FROM test");
-    assert(result != nullptr && result->Next());
+    assert(result != nullptr);
+    assert(result->Next());
     assert(result->GetInt(0) == 100);
 
     db->Disconnect();
@@ -116,8 +135,10 @@ void test_batch_operation() {
 
 void test_empty_result_set() {
   try {
-    auto db = DatabaseFactory::Create(DBType::SQLite);
-    assert(db->Connect(":memory:"));
+    auto db = DatabaseFactory::Create(DB_TYPE);
+    assert(db->Connect(CONNECTION_STRING));
+
+    assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
 
     assert(db->Execute("CREATE TABLE test (id INTEGER, value TEXT)") != nullptr);
 
@@ -138,6 +159,7 @@ void test_empty_result_set() {
 int main() {
   std::cout << "=== Database Connection & Resource Tests ===\n\n";
 
+  test_setup();
   test_single_connection_reuse();
   test_statement_reset_reuse();
   test_batch_operation();

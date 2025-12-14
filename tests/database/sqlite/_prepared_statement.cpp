@@ -6,9 +6,9 @@
   email:     quyen19492@gmail.com
 
   created:   2025/12/07 07:43
-  filename:  aries_base/tests/database/_prepared_statement.cpp
+  filename:  aries_base/tests/database/sqlite/prepared_statement.cpp
 
-  purpose:   Prepared statement tests using CTest
+  purpose:   Parameter binding and statement reuse for SQLite database
 *********************************************************************/
 
 
@@ -18,10 +18,12 @@
 #endif  // _WIN32
 
 #include <cassert>
+#include <filesystem>
 #include <iostream>
 #include <string>
 
 #include <aries_base/database/db_factory.hpp>
+#include "tests/database/sqlite/_settings.hpp"
 // -----------------------------------------------------------------------------
 
 
@@ -31,10 +33,20 @@ using namespace aries_base::database;
 
 // -----------------------------------------------------------------------------
 
+void test_setup() {
+  // Remove existing test database file if any
+  if (DB_TYPE == DBType::SQLite && CONNECTION_STRING == CONNECTION_STRING_SQLITE_FILE) {
+    std::filesystem::remove(CONNECTION_STRING_SQLITE_FILE);
+  }
+}
+// -----------------------------------------------------------------------------
+
 void test_bind_integer() {
   try {
-    auto db = DatabaseFactory::Create(DBType::SQLite);
-    assert(db->Connect(":memory:"));
+    auto db = DatabaseFactory::Create(DB_TYPE);
+    assert(db->Connect(CONNECTION_STRING));
+
+    assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
 
     assert(db->Execute("CREATE TABLE test (id INTEGER PRIMARY KEY, value INTEGER)") != nullptr);
 
@@ -44,7 +56,8 @@ void test_bind_integer() {
     assert(stmt->Execute());
 
     auto result = db->Execute("SELECT value FROM test WHERE id = 1");
-    assert(result != nullptr && result->Next());
+    assert(result != nullptr);
+    assert(result->Next());
     assert(result->GetInt(0) == 42);
 
     db->Disconnect();
@@ -58,8 +71,10 @@ void test_bind_integer() {
 
 void test_bind_string() {
   try {
-    auto db = DatabaseFactory::Create(DBType::SQLite);
-    assert(db->Connect(":memory:"));
+    auto db = DatabaseFactory::Create(DB_TYPE);
+    assert(db->Connect(CONNECTION_STRING));
+
+    assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
 
     assert(db->Execute("CREATE TABLE test (id INTEGER PRIMARY KEY, value TEXT)") != nullptr);
 
@@ -69,7 +84,8 @@ void test_bind_string() {
     assert(stmt->Execute());
 
     auto result = db->Execute("SELECT value FROM test WHERE id = 1");
-    assert(result != nullptr && result->Next());
+    assert(result != nullptr);
+    assert(result->Next());
     assert(result->GetString(0) == "TestData");
 
     db->Disconnect();
@@ -83,8 +99,10 @@ void test_bind_string() {
 
 void test_batch_insert() {
   try {
-    auto db = DatabaseFactory::Create(DBType::SQLite);
-    assert(db->Connect(":memory:"));
+    auto db = DatabaseFactory::Create(DB_TYPE);
+    assert(db->Connect(CONNECTION_STRING));
+
+    assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
 
     assert(db->Execute("CREATE TABLE test (id INTEGER PRIMARY KEY, value TEXT)") != nullptr);
 
@@ -98,7 +116,8 @@ void test_batch_insert() {
     }
 
     auto result = db->Execute("SELECT COUNT(*) FROM test");
-    assert(result != nullptr && result->Next());
+    assert(result != nullptr);
+    assert(result->Next());
     assert(result->GetInt(0) == 5);
 
     db->Disconnect();
@@ -113,6 +132,7 @@ void test_batch_insert() {
 int main() {
   std::cout << "=== Database Prepared Statement Tests ===\n\n";
 
+  test_setup();
   test_bind_integer();
   test_bind_string();
   test_batch_insert();

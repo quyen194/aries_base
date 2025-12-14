@@ -6,9 +6,9 @@
   email:     quyen19492@gmail.com
 
   created:   2025/12/07 07:44
-  filename:  aries_base/tests/database/_transaction.cpp
+  filename:  aries_base/tests/database/sqlite/transaction.cpp
 
-  purpose:   Transaction tests using CTest
+  purpose:   ACID transaction semantics tests for SQLite database
 *********************************************************************/
 
 
@@ -18,9 +18,11 @@
 #endif  // _WIN32
 
 #include <cassert>
+#include <filesystem>
 #include <iostream>
 
 #include <aries_base/database/db_factory.hpp>
+#include "tests/database/sqlite/_settings.hpp"
 // -----------------------------------------------------------------------------
 
 
@@ -30,10 +32,20 @@ using namespace aries_base::database;
 
 // -----------------------------------------------------------------------------
 
+void test_setup() {
+  // Remove existing test database file if any
+  if (DB_TYPE == DBType::SQLite && CONNECTION_STRING == CONNECTION_STRING_SQLITE_FILE) {
+    std::filesystem::remove(CONNECTION_STRING_SQLITE_FILE);
+  }
+}
+// -----------------------------------------------------------------------------
+
 void test_begin_commit() {
   try {
-    auto db = DatabaseFactory::Create(DBType::SQLite);
-    assert(db->Connect(":memory:"));
+    auto db = DatabaseFactory::Create(DB_TYPE);
+    assert(db->Connect(CONNECTION_STRING));
+
+    assert(db->Execute("DROP TABLE IF EXISTS accounts") != nullptr);
 
     assert(db->Execute("CREATE TABLE accounts (id INTEGER PRIMARY KEY, balance INTEGER)") != nullptr);
     assert(db->Execute("INSERT INTO accounts VALUES (1, 100)") != nullptr);
@@ -43,7 +55,8 @@ void test_begin_commit() {
     assert(db->Commit());
 
     auto result = db->Execute("SELECT balance FROM accounts WHERE id = 1");
-    assert(result != nullptr && result->Next());
+    assert(result != nullptr);
+    assert(result->Next());
     assert(result->GetInt(0) == 150);
 
     db->Disconnect();
@@ -57,8 +70,10 @@ void test_begin_commit() {
 
 void test_rollback() {
   try {
-    auto db = DatabaseFactory::Create(DBType::SQLite);
-    assert(db->Connect(":memory:"));
+    auto db = DatabaseFactory::Create(DB_TYPE);
+    assert(db->Connect(CONNECTION_STRING));
+
+    assert(db->Execute("DROP TABLE IF EXISTS accounts") != nullptr);
 
     assert(db->Execute("CREATE TABLE accounts (id INTEGER PRIMARY KEY, balance INTEGER)") != nullptr);
     assert(db->Execute("INSERT INTO accounts VALUES (1, 100)") != nullptr);
@@ -68,7 +83,8 @@ void test_rollback() {
     assert(db->Rollback());
 
     auto result = db->Execute("SELECT balance FROM accounts WHERE id = 1");
-    assert(result != nullptr && result->Next());
+    assert(result != nullptr);
+    assert(result->Next());
     assert(result->GetInt(0) == 100);  // Should be unchanged
 
     db->Disconnect();
@@ -82,8 +98,10 @@ void test_rollback() {
 
 void test_multi_statement_transaction() {
   try {
-    auto db = DatabaseFactory::Create(DBType::SQLite);
-    assert(db->Connect(":memory:"));
+    auto db = DatabaseFactory::Create(DB_TYPE);
+    assert(db->Connect(CONNECTION_STRING));
+
+    assert(db->Execute("DROP TABLE IF EXISTS accounts") != nullptr);
 
     assert(db->Execute("CREATE TABLE accounts (id INTEGER PRIMARY KEY, balance INTEGER)") != nullptr);
     assert(db->Execute("INSERT INTO accounts VALUES (1, 100), (2, 50)") != nullptr);
@@ -94,7 +112,8 @@ void test_multi_statement_transaction() {
     assert(db->Commit());
 
     auto result = db->Execute("SELECT SUM(balance) FROM accounts");
-    assert(result != nullptr && result->Next());
+    assert(result != nullptr);
+    assert(result->Next());
     assert(result->GetInt(0) == 150);
 
     db->Disconnect();
@@ -109,6 +128,7 @@ void test_multi_statement_transaction() {
 int main() {
   std::cout << "=== Database Transaction Tests ===\n\n";
 
+  test_setup();
   test_begin_commit();
   test_rollback();
   test_multi_statement_transaction();
