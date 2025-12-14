@@ -104,8 +104,6 @@ bool MySQLDatabase::Connect(const std::string& connectionString) {
   }
 
   // Set connection options
-  bool reconnect = 1;
-  mysql_options(mysql_, MYSQL_OPT_RECONNECT, &reconnect);
   mysql_options(mysql_, MYSQL_SET_CHARSET_NAME, "utf8mb4");
 
   if (!mysql_real_connect(mysql_,
