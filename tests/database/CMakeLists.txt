@@ -16,6 +16,10 @@ if(ARIES_DB_ENABLE_MYSQL AND ARIES_DB_MYSQL_ENABLED)
     add_subdirectory(mysql)
 endif()
 
+# Include PostgreSQL tests if PostgreSQL support is enabled
+if(ARIES_DB_ENABLE_POSTGRES AND ARIES_DB_POSTGRES_ENABLED)
+    add_subdirectory(postgres)
+endif()
 
 # Include SQLite tests if SQLite support is enabled
 if(ARIES_DB_ENABLE_SQLITE AND ARIES_DB_SQLITE_ENABLED)
