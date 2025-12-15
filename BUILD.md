@@ -97,10 +97,14 @@ sudo apt-get install -y libpq-dev
 sudo apt-get install -y unixodbc-dev
 
 # Optional: Install Microsoft ODBC Driver for SQL Server
-curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-curl https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
-sudo apt-get update
-sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18
+curl https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /usr/share/keyrings/microsoft.gpg
+
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] \
+https://packages.microsoft.com/ubuntu/24.04/prod noble main" | \
+sudo tee /etc/apt/sources.list.d/mssql-release.list
+
+sudo apt update
+sudo ACCEPT_EULA=Y apt install -y msodbcsql18
 ```
 
 ### Verify Installation
