@@ -58,6 +58,7 @@ class LoggerManager {
 
  public:
   static void CreateInstance(std::string logs_directory = DEFAULT_LOGS_DIRECTORY);
+  static void DestroyInstance();
   static LoggerManager* Instance();
 
   // Create logger for individual class with its own file

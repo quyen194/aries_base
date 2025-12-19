@@ -52,6 +52,14 @@ void LoggerManager::CreateInstance(std::string logs_directory) {
 }
 // -----------------------------------------------------------------------------
 
+void LoggerManager::DestroyInstance() {
+  if (instance_) {
+    delete instance_;
+    instance_ = nullptr;
+  }
+}
+// -----------------------------------------------------------------------------
+
 LoggerManager* LoggerManager::Instance() {
   if (instance_ == nullptr) {
     CreateInstance(DEFAULT_LOGS_DIRECTORY);
