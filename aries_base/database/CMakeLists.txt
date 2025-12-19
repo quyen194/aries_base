@@ -167,7 +167,7 @@ if(DATABASE_SOURCES)
     )
 
     # Add database definitions
-    target_compile_definitions(${PROJECT_NAME} PRIVATE ${DATABASE_DEFINITIONS})
+    target_compile_definitions(${PROJECT_NAME} PUBLIC ${DATABASE_DEFINITIONS})
 
     # Link database libraries
     if(DATABASE_LIBS)

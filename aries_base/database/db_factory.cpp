@@ -19,22 +19,6 @@
 
 #include <stdexcept>
 
-#ifdef ARIES_DB_SQLITE
-#include "aries_base/database/sqlite/sqlite_database.hpp"
-#endif
-
-#ifdef ARIES_DB_MYSQL
-#include "aries_base/database/mysql/mysql_database.hpp"
-#endif
-
-#ifdef ARIES_DB_POSTGRES
-#include "aries_base/database/postgres/postgres_database.hpp"
-#endif
-
-#ifdef ARIES_DB_MSSQL
-#include "aries_base/database/mssql/mssql_database.hpp"
-#endif
-
 #include "aries_base/database/db_factory.hpp"
 // -----------------------------------------------------------------------------
 
@@ -85,88 +69,112 @@ std::unique_ptr<Database> DatabaseFactory::Create(DBType type) {
 }
 // -----------------------------------------------------------------------------
 
+#ifdef ARIES_DB_MSSQL
 std::unique_ptr<MSSQLDatabase> DatabaseFactory::ToMSSQL(
     std::unique_ptr<Database>& db) {
   return std::unique_ptr<MSSQLDatabase>(
       dynamic_cast<MSSQLDatabase*>(db.release()));
 }
+#endif  // ARIES_DB_MSSQL
 // -----------------------------------------------------------------------------
 
+#ifdef ARIES_DB_MYSQL
 std::unique_ptr<MySQLDatabase> DatabaseFactory::ToMySQL(
     std::unique_ptr<Database>& db) {
   return std::unique_ptr<MySQLDatabase>(
       dynamic_cast<MySQLDatabase*>(db.release()));
 }
+#endif  // ARIES_DB_MYSQL
 // -----------------------------------------------------------------------------
 
+#ifdef ARIES_DB_POSTGRES
 std::unique_ptr<PostgresDatabase> DatabaseFactory::ToPostgres(
     std::unique_ptr<Database>& db) {
   return std::unique_ptr<PostgresDatabase>(
       dynamic_cast<PostgresDatabase*>(db.release()));
 }
+#endif  // ARIES_DB_POSTGRES
 // -----------------------------------------------------------------------------
 
+#ifdef ARIES_DB_SQLITE
 std::unique_ptr<SQLiteDatabase> DatabaseFactory::ToSQLite(
     std::unique_ptr<Database>& db) {
   return std::unique_ptr<SQLiteDatabase>(
       dynamic_cast<SQLiteDatabase*>(db.release()));
 }
+#endif  // ARIES_DB_SQLITE
 // -----------------------------------------------------------------------------
 
+#ifdef ARIES_DB_MSSQL
 std::unique_ptr<MSSQLStatement> DatabaseFactory::ToMSSQL(
     std::unique_ptr<Statement>& stmt) {
   return std::unique_ptr<MSSQLStatement>(
       dynamic_cast<MSSQLStatement*>(stmt.release()));
 }
+#endif  // ARIES_DB_MSSQL
 // -----------------------------------------------------------------------------
 
+#ifdef ARIES_DB_MYSQL
 std::unique_ptr<MySQLStatement> DatabaseFactory::ToMySQL(
     std::unique_ptr<Statement>& stmt) {
   return std::unique_ptr<MySQLStatement>(
       dynamic_cast<MySQLStatement*>(stmt.release()));
 }
+#endif  // ARIES_DB_MYSQL
 // -----------------------------------------------------------------------------
 
+#ifdef ARIES_DB_POSTGRES
 std::unique_ptr<PostgresStatement> DatabaseFactory::ToPostgres(
     std::unique_ptr<Statement>& stmt) {
   return std::unique_ptr<PostgresStatement>(
       dynamic_cast<PostgresStatement*>(stmt.release()));
 }
+#endif  // ARIES_DB_POSTGRES
 // -----------------------------------------------------------------------------
 
+#ifdef ARIES_DB_SQLITE
 std::unique_ptr<SQLiteStatement> DatabaseFactory::ToSQLite(
     std::unique_ptr<Statement>& stmt) {
   return std::unique_ptr<SQLiteStatement>(
       dynamic_cast<SQLiteStatement*>(stmt.release()));
 }
+#endif  // ARIES_DB_SQLITE
 // -----------------------------------------------------------------------------
 
+#ifdef ARIES_DB_MSSQL
 std::unique_ptr<MSSQLResult> DatabaseFactory::ToMSSQL(
     std::unique_ptr<ResultSets>& result) {
   return std::unique_ptr<MSSQLResult>(
       dynamic_cast<MSSQLResult*>(result.release()));
 }
+#endif  // ARIES_DB_MSSQL
 // -----------------------------------------------------------------------------
 
+#ifdef ARIES_DB_MYSQL
 std::unique_ptr<MySQLResult> DatabaseFactory::ToMySQL(
     std::unique_ptr<ResultSets>& result) {
   return std::unique_ptr<MySQLResult>(
       dynamic_cast<MySQLResult*>(result.release()));
 }
+#endif  // ARIES_DB_MYSQL
 // -----------------------------------------------------------------------------
 
+#ifdef ARIES_DB_POSTGRES
 std::unique_ptr<PostgresResult> DatabaseFactory::ToPostgres(
     std::unique_ptr<ResultSets>& result) {
   return std::unique_ptr<PostgresResult>(
       dynamic_cast<PostgresResult*>(result.release()));
 }
+#endif  // ARIES_DB_POSTGRES
 // -----------------------------------------------------------------------------
 
+#ifdef ARIES_DB_SQLITE
 std::unique_ptr<SQLiteResult> DatabaseFactory::ToSQLite(
     std::unique_ptr<ResultSets>& result) {
   return std::unique_ptr<SQLiteResult>(
       dynamic_cast<SQLiteResult*>(result.release()));
 }
+#endif  // ARIES_DB_SQLITE
 // -----------------------------------------------------------------------------
 
 const char* DatabaseFactory::GetDatabaseTypeName(DBType type) {
