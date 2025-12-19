@@ -12,19 +12,18 @@ project("aries_base" LANGUAGES C CXX)
 # Add cmake modules path
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
+include(CMakeDependentOption)
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/macros.cmake")
 
 # Set default options
-aries_base_set_option(ARIES_DB_ENABLE_SQLITE "Enable SQLite support" ON)
-aries_base_set_option(ARIES_DB_ENABLE_MYSQL "Enable MySQL support" ON)
-aries_base_set_option(ARIES_DB_ENABLE_POSTGRES "Enable PostgreSQL support" ON)
-aries_base_set_option(ARIES_DB_ENABLE_MSSQL "Enable MSSQL support via ODBC" ON)
+aries_base_set_option(ARIES_DB_ENABLE "Enable Database support" ON)
+aries_base_dep_option(ARIES_DB_ENABLE_MSSQL "Enable MSSQL support via ODBC" ON ARIES_DB_ENABLE OFF)
+aries_base_dep_option(ARIES_DB_ENABLE_MYSQL "Enable MySQL support" ON ARIES_DB_ENABLE OFF)
+aries_base_dep_option(ARIES_DB_ENABLE_POSTGRES "Enable PostgreSQL support" ON ARIES_DB_ENABLE OFF)
+aries_base_dep_option(ARIES_DB_ENABLE_SQLITE "Enable SQLite support" ON ARIES_DB_ENABLE OFF)
 
 aries_base_set_option(ARIES_BASE_BUILD_EXAMPLES "Enable build examples" ON)
 aries_base_set_option(ARIES_BASE_BUILD_TESTS "Enable build tests" ON)
-
-# Print summary of configuration
-aries_base_print_summary()
 
 # FetchContent module for third-party dependencies
 include(FetchContent)
@@ -44,11 +43,13 @@ add_subdirectory(aries_base)
 
 # Build examples if enabled
 if(ARIES_BASE_BUILD_EXAMPLES)
+    set(HAVE_ARIES_BASE_BUILD_EXAMPLES ON)
     add_subdirectory(examples)
 endif()
 
 # Build tests if enabled
 if(ARIES_BASE_BUILD_TESTS)
+    set(HAVE_ARIES_BASE_BUILD_TESTS ON)
     enable_testing()
     add_subdirectory(tests)
 endif()
@@ -59,3 +60,6 @@ if(ARIES_BASE_BUILD_EXAMPLES AND ARIES_BASE_BUILD_TESTS)
         aries_base_all_tests
     )
 endif()
+
+# Print summary of configuration
+aries_base_print_summary()
