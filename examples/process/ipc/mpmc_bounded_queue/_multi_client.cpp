@@ -20,9 +20,9 @@
 #include <thread>
 #include <vector>
 
-#include "aries_base/process/thread_pool/thread_pool.hpp"
-#include "aries_base/process/ipc/mpmc_bounded_queue/ipc_server.hpp"
-#include "aries_base/process/ipc/mpmc_bounded_queue/ipc_client.hpp"
+#include <aries_base/process/thread_pool/thread_pool.hpp>
+#include <aries_base/process/ipc/mpmc_bounded_queue/ipc_server.hpp>
+#include <aries_base/process/ipc/mpmc_bounded_queue/ipc_client.hpp>
 // -----------------------------------------------------------------------------
 
 
