@@ -17,7 +17,7 @@
 #include <chrono>
 #include <vector>
 
-#include "aries_base/process/thread_pool/thread_pool.hpp"
+#include <aries_base/process/thread_pool/thread_pool.hpp>
 // -----------------------------------------------------------------------------
 
 

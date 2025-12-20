@@ -17,7 +17,7 @@
 #include <iostream>
 #include <thread>
 
-#include "aries_base/process/thread_pool/thread_pool.hpp"
+#include <aries_base/process/thread_pool/thread_pool.hpp>
 // -----------------------------------------------------------------------------
 
 
