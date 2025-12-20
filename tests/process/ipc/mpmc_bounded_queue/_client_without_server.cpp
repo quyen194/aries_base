@@ -19,7 +19,7 @@
 #include <cstring>
 #include <iostream>
 
-#include "aries_base/process/ipc/mpmc_bounded_queue/ipc_client.hpp"
+#include <aries_base/process/ipc/mpmc_bounded_queue/ipc_client.hpp>
 // -----------------------------------------------------------------------------
 
 
