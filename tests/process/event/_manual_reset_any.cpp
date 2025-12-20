@@ -18,7 +18,7 @@
 #include <iostream>
 #include <thread>
 
-#include "aries_base/process/event/event.hpp"
+#include <aries_base/process/event/event.hpp>
 // -----------------------------------------------------------------------------
 
 

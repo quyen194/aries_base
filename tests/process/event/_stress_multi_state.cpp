@@ -22,7 +22,7 @@
 #include <atomic>
 #include <random>
 
-#include "aries_base/process/event/event.hpp"
+#include <aries_base/process/event/event.hpp>
 // -----------------------------------------------------------------------------
 
 
