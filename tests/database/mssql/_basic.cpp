@@ -52,7 +52,7 @@ void test_sql_connection() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
     assert(db != nullptr);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(MSSQL_CONNECTION_STRING));
     db->Disconnect();
     std::cout << "✓ Connection test passed\n";
   } catch (const std::exception& e) {
@@ -65,7 +65,7 @@ void test_sql_connection() {
 void test_query_execution() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(MSSQL_CONNECTION_STRING));
 
     assert(db->Execute("IF OBJECT_ID(N'dbo.test', N'U') IS NOT NULL DROP TABLE dbo.test") != nullptr);
 
@@ -90,7 +90,7 @@ void test_query_execution() {
 void test_column_type_retrieval() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(MSSQL_CONNECTION_STRING));
 
     assert(db->Execute("IF OBJECT_ID(N'dbo.test', N'U') IS NOT NULL DROP TABLE dbo.test") != nullptr);
 

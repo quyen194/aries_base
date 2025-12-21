@@ -53,7 +53,7 @@ void test_setup() {
 void test_invalid_sql() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(MSSQL_CONNECTION_STRING));
 
     // Invalid SQL should return nullptr
     auto result = db->Execute("SELECT * FROM nonexistent_table");
@@ -74,7 +74,7 @@ void test_invalid_sql() {
 void test_null_handling() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(MSSQL_CONNECTION_STRING));
 
     assert(db->Execute("CREATE TABLE nullable_test (id INTEGER, data TEXT)") != nullptr);
     assert(db->Execute("INSERT INTO nullable_test VALUES (1, NULL)") != nullptr);
@@ -96,9 +96,9 @@ void test_null_handling() {
 void test_constraint_violation() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(MSSQL_CONNECTION_STRING));
 
-    assert(db->Execute("CREATE TABLE unique_test (id INTEGER IDENTITY(1,1) PRIMARY KEY, code VARCHAR(32) UNIQUE)") != nullptr);
+    assert(db->Execute("CREATE TABLE unique_test (id INT IDENTITY(1,1) PRIMARY KEY, code VARCHAR(32) UNIQUE)") != nullptr);
     assert(db->Execute("INSERT INTO unique_test(code) VALUES ('ABC123')") != nullptr);
 
     // Try to insert duplicate - should fail gracefully
@@ -120,7 +120,7 @@ void test_constraint_violation() {
 void test_large_data() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(MSSQL_CONNECTION_STRING));
 
     assert(db->Execute("CREATE TABLE large_data (id INTEGER, content VARBINARY(MAX))") != nullptr);
 

@@ -8,7 +8,7 @@
   created:   2025/12/11 16:37
   filename:  aries_base/tests/database/mssql/settings.hpp
 
-  purpose:   MySQL database settings for tests
+  purpose:   MSSQL database settings for tests
 *********************************************************************/
 
 
@@ -34,7 +34,7 @@ using namespace aries_base::database;
 #define CONNECTION_STRING_MSSQL "Driver={ODBC Driver 17 for SQL Server};Server=127.0.0.1;UID=sa;PWD=C7A896D22505E15E7F146045E7FFA011;Database=test;"
 // -----------------------------------------------------------------------------
 const DBType DB_TYPE = DBType::MSSQL;
-const std::string CONNECTION_STRING = CONNECTION_STRING_MSSQL;
+const std::string MSSQL_CONNECTION_STRING = CONNECTION_STRING_MSSQL;
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------

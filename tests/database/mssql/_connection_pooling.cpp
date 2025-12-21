@@ -51,7 +51,7 @@ void test_setup() {
 void test_single_connection_reuse() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(MSSQL_CONNECTION_STRING));
 
     assert(db->Execute("IF OBJECT_ID(N'dbo.test', N'U') IS NOT NULL DROP TABLE dbo.test") != nullptr);
 
@@ -77,11 +77,11 @@ void test_single_connection_reuse() {
 void test_statement_reset_reuse() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(MSSQL_CONNECTION_STRING));
 
     assert(db->Execute("IF OBJECT_ID(N'dbo.test', N'U') IS NOT NULL DROP TABLE dbo.test") != nullptr);
 
-    assert(db->Execute("CREATE TABLE test (id INTEGER IDENTITY(1,1) PRIMARY KEY, value TEXT)") != nullptr);
+    assert(db->Execute("CREATE TABLE test (id INT IDENTITY(1,1) PRIMARY KEY, value TEXT)") != nullptr);
 
     auto stmt = db->Prepare("INSERT INTO test (value) VALUES (?)");
     assert(stmt != nullptr);
@@ -110,11 +110,11 @@ void test_statement_reset_reuse() {
 void test_batch_operation() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(MSSQL_CONNECTION_STRING));
 
     assert(db->Execute("IF OBJECT_ID(N'dbo.test', N'U') IS NOT NULL DROP TABLE dbo.test") != nullptr);
 
-    assert(db->Execute("CREATE TABLE test (id INTEGER IDENTITY(1,1) PRIMARY KEY, value INTEGER)") != nullptr);
+    assert(db->Execute("CREATE TABLE test (id INT IDENTITY(1,1) PRIMARY KEY, value INTEGER)") != nullptr);
 
     auto stmt = db->Prepare("INSERT INTO test (value) VALUES (?)");
     assert(stmt != nullptr);
@@ -143,7 +143,7 @@ void test_batch_operation() {
 void test_empty_result_set() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(MSSQL_CONNECTION_STRING));
 
     assert(db->Execute("IF OBJECT_ID(N'dbo.test', N'U') IS NOT NULL DROP TABLE dbo.test") != nullptr);
 
