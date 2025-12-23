@@ -174,7 +174,7 @@ std::unique_ptr<ResultSets> MySQLDatabase::Execute(const std::string& sql) {
     // No result set (INSERT, UPDATE, DELETE, etc.)
     if (mysql_field_count(mysql_) == 0) {
       // Query was successful and should not return data
-      return std::make_unique<MySQLResult>(nullptr);
+      return std::make_unique<MySQLResult>((MYSQL_RES*)nullptr);
     } else {
       // Error occurred
       last_error_ = mysql_error(mysql_);

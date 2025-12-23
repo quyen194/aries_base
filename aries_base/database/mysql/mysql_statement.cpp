@@ -177,20 +177,7 @@ std::unique_ptr<ResultSets> MySQLStatement::Query() {
     return nullptr;
   }
 
-  MYSQL_RES* result = mysql_stmt_result_metadata(stmt_);
-  if (!result) {
-    return nullptr;
-  }
-
-  // For prepared statements, we'd need to bind result columns
-  // For simplicity, we'll store the result
-  mysql_stmt_store_result(stmt_);
-
-  // Note: This is a simplified implementation
-  // A full implementation would bind result columns properly
-  mysql_free_result(result);
-
-  return nullptr; // Simplified - would need proper result binding
+  return std::make_unique<MySQLResult>(stmt_);
 }
 // -----------------------------------------------------------------------------
 

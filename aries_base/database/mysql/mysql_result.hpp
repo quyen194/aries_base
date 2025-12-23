@@ -20,6 +20,7 @@
 
 // -----------------------------------------------------------------------------
 #include <cstdint>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -46,7 +47,8 @@ namespace mysql {
  */
 class MySQLResult : public ResultSets {
  public:
-  MySQLResult(MYSQL_RES* result);
+  explicit MySQLResult(MYSQL_STMT* stmt);
+  explicit MySQLResult(MYSQL_RES* result);
   ~MySQLResult() override;
 
   // ResultSets interface
@@ -67,13 +69,21 @@ class MySQLResult : public ResultSets {
 
  private:
   int GetColumnIndex(const std::string& columnName) const;
+  void BindResultColumns();
+  void FetchColumnData(int col);
 
  private:
   MYSQL_RES* result_;
   MYSQL_ROW current_row_;
-  unsigned long* lengths_;
   int num_fields_;
   MYSQL_FIELD* fields_;
+
+  MYSQL_STMT* stmt_;
+  std::vector<MYSQL_BIND> binds_;
+  std::map<std::string, int> column_map_;
+  std::vector<std::vector<char>> buffers_;
+  std::vector<uint8_t> null_indicators_;
+  std::vector<unsigned long> lengths_;
 };
 // -----------------------------------------------------------------------------
 
