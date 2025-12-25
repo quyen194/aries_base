@@ -15,6 +15,8 @@ project(${PROJECT_NAME} LANGUAGES CXX)
 # Collect example sources (place your example .cpp files here, e.g. main.cpp, demo.cpp)
 file(GLOB EXAMPLE_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.c"
 )
 
 if(NOT EXAMPLE_SOURCES)
