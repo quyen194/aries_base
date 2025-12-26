@@ -52,7 +52,7 @@ void test_setup() {
 void test_single_connection_reuse() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(POSTGRES_CONNECTION_STRING));
 
     assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
 
@@ -78,7 +78,7 @@ void test_single_connection_reuse() {
 void test_statement_reset_reuse() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(POSTGRES_CONNECTION_STRING));
 
     assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
 
@@ -113,7 +113,7 @@ void test_statement_reset_reuse() {
 void test_batch_operation() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(POSTGRES_CONNECTION_STRING));
 
     assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
 
@@ -148,7 +148,7 @@ void test_batch_operation() {
 void test_empty_result_set() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(POSTGRES_CONNECTION_STRING));
 
     assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
 

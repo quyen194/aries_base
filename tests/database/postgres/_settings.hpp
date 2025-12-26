@@ -34,7 +34,7 @@ using namespace aries_base::database;
 #define CONNECTION_STRING_POSGRES "host=127.0.0.1;port=5432;user=postgres;password=eLt43ykYChcoOdpgMhkP;dbname=test;"
 // -----------------------------------------------------------------------------
 const DBType DB_TYPE = DBType::PostgreSQL;
-const std::string CONNECTION_STRING = CONNECTION_STRING_POSGRES;
+const std::string POSTGRES_CONNECTION_STRING = CONNECTION_STRING_POSGRES;
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------

@@ -52,7 +52,7 @@ void test_setup() {
 void test_bind_integer() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(POSTGRES_CONNECTION_STRING));
 
     assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
 
@@ -81,7 +81,7 @@ void test_bind_integer() {
 void test_bind_string() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(POSTGRES_CONNECTION_STRING));
 
     assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
 
@@ -110,7 +110,7 @@ void test_bind_string() {
 void test_batch_insert() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(POSTGRES_CONNECTION_STRING));
 
     assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
 

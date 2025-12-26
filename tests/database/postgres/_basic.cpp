@@ -53,7 +53,7 @@ void test_sql_connection() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
     assert(db != nullptr);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(POSTGRES_CONNECTION_STRING));
     db->Disconnect();
     std::cout << "✓ Connection test passed\n";
   } catch (const std::exception& e) {
@@ -66,7 +66,7 @@ void test_sql_connection() {
 void test_query_execution() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(POSTGRES_CONNECTION_STRING));
 
     assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
 
@@ -91,7 +91,7 @@ void test_query_execution() {
 void test_column_type_retrieval() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(POSTGRES_CONNECTION_STRING));
 
     assert(db->Execute("DROP TABLE IF EXISTS types_test") != nullptr);
 

@@ -51,7 +51,7 @@ void test_setup() {
 void test_begin_commit() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(POSTGRES_CONNECTION_STRING));
 
     assert(db->Execute("DROP TABLE IF EXISTS accounts") != nullptr);
 
@@ -79,7 +79,7 @@ void test_begin_commit() {
 void test_rollback() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(POSTGRES_CONNECTION_STRING));
 
     assert(db->Execute("DROP TABLE IF EXISTS accounts") != nullptr);
 
@@ -107,7 +107,7 @@ void test_rollback() {
 void test_multi_statement_transaction() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(POSTGRES_CONNECTION_STRING));
 
     assert(db->Execute("DROP TABLE IF EXISTS accounts") != nullptr);
 
