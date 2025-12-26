@@ -33,7 +33,7 @@ using namespace aries_base::database;
 #define CONNECTION_STRING_MYSQL "host=127.0.0.1;port=3306;user=root;password=;database=test"
 // -----------------------------------------------------------------------------
 const DBType DB_TYPE = DBType::MySQL;
-const std::string CONNECTION_STRING = CONNECTION_STRING_MYSQL;
+const std::string MYSQL_CONNECTION_STRING = CONNECTION_STRING_MYSQL;
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
