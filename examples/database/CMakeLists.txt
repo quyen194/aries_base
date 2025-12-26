@@ -16,6 +16,11 @@ if(HAVE_ARIES_DB_ENABLE_MSSQL)
     add_subdirectory(mssql)
 endif()
 
+# Include MySQL examples if MySQL support is enabled
+if(HAVE_ARIES_DB_ENABLE_MYSQL)
+    add_subdirectory(mysql)
+endif()
+
 # Include SQLite examples if SQLite support is enabled
 if(HAVE_ARIES_DB_ENABLE_SQLITE)
     add_subdirectory(sqlite)
