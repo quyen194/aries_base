@@ -21,6 +21,11 @@ if(HAVE_ARIES_DB_ENABLE_MYSQL)
     add_subdirectory(mysql)
 endif()
 
+# Include PostgreSQL examples if PostgreSQL support is enabled
+if(HAVE_ARIES_DB_ENABLE_POSTGRES)
+    add_subdirectory(postgres)
+endif()
+
 # Include SQLite examples if SQLite support is enabled
 if(HAVE_ARIES_DB_ENABLE_SQLITE)
     add_subdirectory(sqlite)
