@@ -35,7 +35,7 @@ using namespace aries_base::database;
 
 void test_setup() {
   // Remove existing test database file if any
-  if (DB_TYPE == DBType::SQLite && CONNECTION_STRING == CONNECTION_STRING_SQLITE_FILE) {
+  if (DB_TYPE == DBType::SQLite && SQLITE_CONNECTION_STRING == CONNECTION_STRING_SQLITE_FILE) {
     std::filesystem::remove(CONNECTION_STRING_SQLITE_FILE);
   }
 }
@@ -44,7 +44,7 @@ void test_setup() {
 void test_single_connection_reuse() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(SQLITE_CONNECTION_STRING));
 
     assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
 
@@ -70,7 +70,7 @@ void test_single_connection_reuse() {
 void test_statement_reset_reuse() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(SQLITE_CONNECTION_STRING));
 
     assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
 
@@ -103,7 +103,7 @@ void test_statement_reset_reuse() {
 void test_batch_operation() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(SQLITE_CONNECTION_STRING));
 
     assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
 
@@ -136,7 +136,7 @@ void test_batch_operation() {
 void test_empty_result_set() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(SQLITE_CONNECTION_STRING));
 
     assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
 

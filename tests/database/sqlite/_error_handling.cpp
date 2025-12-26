@@ -34,7 +34,7 @@ using namespace aries_base::database;
 
 void test_setup() {
   // Remove existing test database file if any
-  if (DB_TYPE == DBType::SQLite && CONNECTION_STRING == CONNECTION_STRING_SQLITE_FILE) {
+  if (DB_TYPE == DBType::SQLite && SQLITE_CONNECTION_STRING == CONNECTION_STRING_SQLITE_FILE) {
     std::filesystem::remove(CONNECTION_STRING_SQLITE_FILE);
   }
 }
@@ -43,7 +43,7 @@ void test_setup() {
 void test_invalid_sql() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(SQLITE_CONNECTION_STRING));
 
     // Invalid SQL should return nullptr
     auto result = db->Execute("SELECT * FROM nonexistent_table");
@@ -64,7 +64,7 @@ void test_invalid_sql() {
 void test_null_handling() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(SQLITE_CONNECTION_STRING));
 
     assert(db->Execute("CREATE TABLE nullable_test (id INTEGER, data TEXT)") != nullptr);
     assert(db->Execute("INSERT INTO nullable_test VALUES (1, NULL)") != nullptr);
@@ -86,7 +86,7 @@ void test_null_handling() {
 void test_constraint_violation() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(SQLITE_CONNECTION_STRING));
 
     assert(db->Execute("CREATE TABLE unique_test (id INTEGER PRIMARY KEY, code TEXT UNIQUE)") != nullptr);
     assert(db->Execute("INSERT INTO unique_test VALUES (1, 'ABC123')") != nullptr);
@@ -110,7 +110,7 @@ void test_constraint_violation() {
 void test_large_data() {
   try {
     auto db = DatabaseFactory::Create(DB_TYPE);
-    assert(db->Connect(CONNECTION_STRING));
+    assert(db->Connect(SQLITE_CONNECTION_STRING));
 
     assert(db->Execute("CREATE TABLE large_data (id INTEGER, content TEXT)") != nullptr);
 

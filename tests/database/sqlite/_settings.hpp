@@ -34,7 +34,7 @@ using namespace aries_base::database;
 #define CONNECTION_STRING_SQLITE_FILE "test.db"
 // -----------------------------------------------------------------------------
 const DBType DB_TYPE = DBType::SQLite;
-const std::string CONNECTION_STRING = CONNECTION_STRING_SQLITE_FILE;
+const std::string SQLITE_CONNECTION_STRING = CONNECTION_STRING_SQLITE_FILE;
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
