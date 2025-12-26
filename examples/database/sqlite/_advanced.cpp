@@ -5,10 +5,10 @@
   author:    quyen19492
   email:     quyen19492@gmail.com
 
-  created:   2025/12/07 07:23
-  filename:  aries_base/examples/database/advanced.cpp
+  created:   2025/12/20 07:07
+  filename:  aries_base/examples/database/sqlite/advanced.cpp
 
-  purpose: Advanced database features example
+  purpose:   Complex real-world scenarios with SQLite database
 *********************************************************************/
 
 // -----------------------------------------------------------------------------
@@ -16,10 +16,14 @@
 #include <windows.h>
 #endif  // _WIN32
 
+#include <filesystem>
 #include <iomanip>
 #include <iostream>
+#include <string>
 
-#include "aries_base/database/db_factory.hpp"
+#include <aries_base/database/db_factory.hpp>
+
+#include "examples/database/sqlite/_settings.hpp"
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
@@ -28,35 +32,48 @@ using namespace aries_base::database;
 
 // -----------------------------------------------------------------------------
 
+void setup() {
+  // Remove existing test database file if any
+  if (SQLITE_CONNECTION_STRING == CONNECTION_STRING_SQLITE_FILE) {
+    std::filesystem::remove(CONNECTION_STRING_SQLITE_FILE);
+  }
+}
+// -----------------------------------------------------------------------------
+
 int main() {
-  std::cout << "=== Database Library - Advanced Example ===" << std::endl
+  std::cout << "=== SQLite Database Library - Advanced Example ===" << std::endl
             << std::endl;
+
+  setup();
 
   try {
     auto db = DatabaseFactory::Create(DBType::SQLite);
 
-    if (!db->Connect(":memory:")) {
+    if (!db->Connect(SQLITE_CONNECTION_STRING)) {
       std::cerr << "Failed to connect: " << db->GetLastError() << std::endl;
       return 1;
     }
 
-    std::cout << "Connected to SQLite database" << std::endl << std::endl;
+    std::cout << "Connected to database" << std::endl << std::endl;
 
     // ====================================================================
     // Setup: Create products and orders tables
     // ====================================================================
     std::cout << "--- Setting up database schema ---" << std::endl;
 
-    db->Execute(R"(
+    if (!db->Execute(R"(
             CREATE TABLE products (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 price REAL NOT NULL,
                 stock INTEGER NOT NULL
             )
-        )");
+        )")) {
+      std::cerr << "Failed to create products table: " << db->GetLastError() << std::endl;
+      return 1;
+    }
 
-    db->Execute(R"(
+    if (!db->Execute(R"(
             CREATE TABLE orders (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 product_id INTEGER NOT NULL,
@@ -65,7 +82,10 @@ int main() {
                 total REAL NOT NULL,
                 FOREIGN KEY(product_id) REFERENCES products(id)
             )
-        )");
+        )")) {
+      std::cerr << "Failed to create orders table: " << db->GetLastError() << std::endl;
+      return 1;
+    }
 
     std::cout << "Created tables: products, orders" << std::endl << std::endl;
 
@@ -76,6 +96,12 @@ int main() {
 
     auto insertProduct = db->Prepare(
         "INSERT INTO products (name, price, stock) VALUES (?, ?, ?)");
+
+    if (!insertProduct) {
+      std::cerr << "Failed to prepare insert product statement: " << db->GetLastError()
+                << std::endl;
+      return 1;
+    }
 
     struct Product {
       const char* name;
@@ -94,7 +120,11 @@ int main() {
       insertProduct->BindString(1, p.name);
       insertProduct->BindDouble(2, p.price);
       insertProduct->BindInt(3, p.stock);
-      insertProduct->Execute();
+      if (!insertProduct->Execute()) {
+        std::cerr << "Failed to insert product " << p.name << ": "
+                  << db->GetLastError() << std::endl;
+        return 1;
+      }
       std::cout << "  Inserted: " << p.name << " - $" << std::fixed
                 << std::setprecision(2) << p.price << std::endl;
     }
@@ -109,6 +139,12 @@ int main() {
 
     auto insertOrder = db->Prepare(
         "INSERT INTO orders (product_id, quantity, total) VALUES (?, ?, ?)");
+
+    if (!insertOrder) {
+      std::cerr << "Failed to prepare insert order statement: " << db->GetLastError()
+                << std::endl;
+      return 1;
+    }
 
     // Simulate some orders
     struct Order {
@@ -130,6 +166,12 @@ int main() {
                           std::to_string(order.product_id);
       auto result = db->Execute(query);
 
+      if (!result) {
+        std::cerr << "Failed to retrieve product price: " << db->GetLastError()
+                  << std::endl;
+        return 1;
+      }
+
       double total = 0.0;
       if (result && result->Next()) {
         total = result->GetDouble(0) * order.quantity;
@@ -139,7 +181,12 @@ int main() {
       insertOrder->BindInt(1, order.product_id);
       insertOrder->BindInt(2, order.quantity);
       insertOrder->BindDouble(3, total);
-      insertOrder->Execute();
+      if (!insertOrder->Execute()) {
+        std::cerr << "Failed to insert order for product ID "
+                  << order.product_id << ": " << db->GetLastError()
+                  << std::endl;
+        return 1;
+      }
 
       std::cout << "  Order: Product ID " << order.product_id << " x "
                 << order.quantity << " = $" << std::fixed
@@ -158,25 +205,37 @@ int main() {
                 name,
                 price,
                 stock,
-                (SELECT COUNT(*) FROM orders WHERE product_id = products.id) as orders_count,
-                COALESCE((SELECT SUM(total) FROM orders WHERE product_id = products.id), 0) as total_revenue
+                (SELECT COUNT(*) FROM orders WHERE product_id = products.id) AS orders_count,
+                COALESCE((SELECT SUM(total) FROM orders WHERE product_id = products.id), 0) AS total_revenue
             FROM products
             ORDER BY total_revenue DESC
         )");
 
-    std::cout << std::left << std::setw(15) << "Product" << std::setw(10)
-              << "Price" << std::setw(10) << "Stock" << std::setw(10)
-              << "Orders" << std::setw(15) << "Revenue" << std::endl;
+    if (!statsResult) {
+      std::cerr << "Failed to retrieve product statistics: " << db->GetLastError()
+                << std::endl;
+      return 1;
+    }
+
+    std::cout << std::left
+              << std::setw(15) << "Product"
+              << std::setw(10) << "Price"
+              << std::setw(10) << "Stock"
+              << std::setw(10) << "Orders"
+              << std::setw(15) << "Revenue"
+              << std::endl;
     std::cout << std::string(60, '-') << std::endl;
 
     while (statsResult->Next()) {
       std::cout << std::left << std::setw(15) << statsResult->GetString(0)
-                << "$" << std::right << std::setw(8) << std::fixed
-                << std::setprecision(2) << statsResult->GetDouble(1)
-                << std::left << std::setw(9) << statsResult->GetInt(2)
-                << std::setw(10) << statsResult->GetInt(3) << "$"
-                << std::setw(13) << std::fixed << std::setprecision(2)
-                << statsResult->GetDouble(4) << std::endl;
+                << "$" << std::right << std::setw(7) << std::fixed << std::setprecision(2) << statsResult->GetDouble(1)
+                << std::setw(2) << " "
+                << std::right << std::setw(5) << statsResult->GetInt(2)
+                << std::setw(5) << " "
+                << std::right << std::setw(6) << statsResult->GetInt(3)
+                << std::setw(4) << " "
+                << "$" << std::right << std::setw(7) << std::fixed << std::setprecision(2) << statsResult->GetDouble(4)
+                << std::endl;
     }
 
     std::cout << std::endl;
@@ -193,6 +252,10 @@ int main() {
       // Reduce stock for each product ordered
       auto updateStock =
           db->Prepare("UPDATE products SET stock = stock - ? WHERE id = ?");
+
+      if (!updateStock) {
+        throw std::runtime_error("Failed to prepare update stock statement");
+      }
 
       for (const auto& order : orders) {
         updateStock->Reset();
@@ -221,8 +284,16 @@ int main() {
     auto inventoryResult =
         db->Execute("SELECT id, name, stock FROM products ORDER BY id");
 
-    std::cout << std::left << std::setw(5) << "ID" << std::setw(20) << "Product"
-              << std::setw(10) << "Stock" << std::endl;
+    if (!inventoryResult) {
+      std::cerr << "Failed to retrieve inventory: " << db->GetLastError() << std::endl;
+      return 1;
+    }
+
+    std::cout << std::left
+              << std::setw(5) << "ID"
+              << std::setw(20) << "Product"
+              << std::setw(10) << "Stock"
+              << std::endl;
     std::cout << std::string(35, '-') << std::endl;
 
     while (inventoryResult->Next()) {
@@ -255,21 +326,35 @@ int main() {
             FROM products
         )");
 
-    if (summaryResult && summaryResult->Next()) {
-      std::cout << "Total Products: " << summaryResult->GetInt(0) << std::endl;
-      std::cout << "Total Stock: " << summaryResult->GetInt(1) << " units"
+    if (!summaryResult) {
+      std::cerr << "Failed to retrieve summary statistics: " << db->GetLastError()
                 << std::endl;
-      std::cout << "Inventory Value: $" << std::fixed << std::setprecision(2)
-                << summaryResult->GetDouble(2) << std::endl;
+      return 1;
     }
+
+    while (summaryResult->Next()) {
+      std::cout << "Total Products: " << summaryResult->GetInt(0) << std::endl;
+      std::cout << "Total Stock: " << summaryResult->GetInt(1) << " units" << std::endl;
+      std::cout << "Inventory Value: $" << std::fixed << std::setprecision(2) << summaryResult->GetDouble(2) << std::endl;
+    }
+
+    std::cout << std::endl;
 
     auto ordersSummary = db->Execute(
         "SELECT COUNT(*) as order_count, SUM(total) as total_sales FROM orders");
-    if (ordersSummary && ordersSummary->Next()) {
-      std::cout << "\nTotal Orders: " << ordersSummary->GetInt(0) << std::endl;
-      std::cout << "Total Sales: $" << std::fixed << std::setprecision(2)
-                << ordersSummary->GetDouble(1) << std::endl;
+
+    if (!ordersSummary) {
+      std::cerr << "Failed to retrieve orders summary: " << db->GetLastError()
+                << std::endl;
+      return 1;
     }
+
+    while (ordersSummary->Next()) {
+      std::cout << "Total Orders: " << ordersSummary->GetInt(0) << std::endl;
+      std::cout << "Total Sales: $" << std::fixed << std::setprecision(2) << ordersSummary->GetDouble(1) << std::endl;
+    }
+
+    std::cout << std::endl;
 
     db->Disconnect();
     std::cout << "\n=== Example Complete ===" << std::endl;
