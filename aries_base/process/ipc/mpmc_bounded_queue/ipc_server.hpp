@@ -96,8 +96,10 @@ class IpcServer {
 
   SharedMemory* shared_memory_;
 
+  bool destroying_;
   bool working_;
   std::unique_ptr<Event> worker_thread_end_event_;
+  std::thread::id worker_thread_id_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(IpcServer);

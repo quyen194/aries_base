@@ -73,7 +73,9 @@ IpcServer::IpcServer()
       mem_map_(nullptr),
       map_size_(0),
       shared_memory_(nullptr),
-      working_(false) {
+      destroying_(false),
+      working_(false),
+      worker_thread_id_(std::thread::id()) {
   // initialize file-scope state if necessary
 }
 // -----------------------------------------------------------------------------
@@ -192,20 +194,25 @@ bool IpcServer::Create(uint32_t block_size, uint32_t block_count) {
 // -----------------------------------------------------------------------------
 
 void IpcServer::Destroy() {
+  // prevent re-entrance
+  if (destroying_) {
+    return;
+  }
+
+  // mark as destroying
+  destroying_ = true;
+
   // Signal worker to stop
   shared_memory_->SetWorking(false);
 
   // Stop worker thread
   working_ = false;
 
-  if (!worker_thread_end_event_) {
-    // when worker is run in the same thread, just cleanup directly
-    DestroyInternal();
-    return;
+  if (worker_thread_end_event_ &&
+      std::this_thread::get_id() != worker_thread_id_) {
+    // Wait for worker thread to finish
+    worker_thread_end_event_->Wait();
   }
-
-  // Wait for worker thread to finish
-  worker_thread_end_event_->Wait();
 }
 // -----------------------------------------------------------------------------
 
@@ -272,6 +279,11 @@ void IpcServer::RunWorker() {
   Worker();
   // Signal worker to stop
   shared_memory_->SetWorking(false);
+
+  // final cleanup
+  if (destroying_) {
+    DestroyInternal();
+  }
 }
 // -----------------------------------------------------------------------------
 
@@ -289,6 +301,9 @@ void IpcServer::Worker() {
   if (!shared_memory_ || !shared_memory_->IsValid()) {
     return;
   }
+
+  // set worker thread id
+  worker_thread_id_ = std::this_thread::get_id();
 
   bool exiting = false;
   uint32_t exit_counter = 0;
@@ -325,10 +340,8 @@ void IpcServer::Worker() {
     }
   }
 
-  if (worker_thread_end_event_) {
-    // when running in a separate thread, do cleanup here
-    DestroyInternal();
-  }
+  // set worker thread id to invalid
+  worker_thread_id_ = std::thread::id();
 }
 // -----------------------------------------------------------------------------
 
