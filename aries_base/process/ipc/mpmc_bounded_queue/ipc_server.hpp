@@ -53,11 +53,11 @@ class IpcServer {
   IpcServer();
   ~IpcServer();
 
-  void SetName(const std::string& name_prefix, bool cross_process = false, uint32_t port_number = 0);
-  const std::string& GetName() const { return server_name_; }
+  void SetName(const std::string& server_name, bool cross_process = false, uint32_t port_number = 0);
+  const std::string& GetName() const { return unique_name_; }
 
   bool IsCrossProcess() const {
-    return !server_name_.empty() && server_name_.front() == '/';
+    return !unique_name_.empty() && unique_name_.front() == '/';
   }
 
   void SetIpcType(IpcType type);
@@ -77,7 +77,10 @@ class IpcServer {
   void Worker();
 
  private:
+  // user input names
   std::string server_name_;
+  // actual unique name used for IPC
+  std::string unique_name_;
   IpcType ipc_type_;
 
 #if defined(_WIN32)

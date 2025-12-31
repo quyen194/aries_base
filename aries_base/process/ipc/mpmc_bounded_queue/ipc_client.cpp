@@ -60,6 +60,7 @@ using namespace aries_base::process::utils;
 
 IpcClient::IpcClient()
     : server_name_(""),
+      unique_name_(""),
 #if defined(_WIN32)
       wins_fd_(nullptr),
 #else
@@ -73,32 +74,33 @@ IpcClient::IpcClient()
 IpcClient::~IpcClient() {}
 // -----------------------------------------------------------------------------
 
-void IpcClient::SetName(const std::string& name_prefix,
+void IpcClient::SetName(const std::string& server_name,
                         bool cross_process,
                         uint32_t port_number) {
+  server_name_ = server_name;
   if (cross_process) {
     // cross-process: "/<name_prefix>_<port_number>"
-    server_name_ = "/_" + name_prefix;
-    server_name_ += "_" + std::to_string(port_number);
+    unique_name_ = "/_" + server_name_;
+    unique_name_ += "_" + std::to_string(port_number);
   }
   else {
     // same-process: "<name_prefix>_<process_id>_<thread_id>"
-    server_name_ = "_" + name_prefix;
+    unique_name_ = "_" + server_name_;
     uint64_t process_id = static_cast<uint64_t>(GetPID());
-    server_name_ += "_" + std::to_string(process_id);
+    unique_name_ += "_" + std::to_string(process_id);
     uint64_t thread_id = static_cast<uint64_t>(std::hash<std::thread::id>{}(std::this_thread::get_id()));
-    server_name_ += "_" + std::to_string(thread_id);
+    unique_name_ += "_" + std::to_string(thread_id);
   }
 }
 // -----------------------------------------------------------------------------
 
-void IpcClient::SetNameEx(const std::string& name) {
-  server_name_ = name;
+void IpcClient::SetNameEx(const std::string& unique_name) {
+  unique_name_ = unique_name;
 }
 // -----------------------------------------------------------------------------
 
 bool IpcClient::Connect() {
-  if (server_name_.empty()) {
+  if (unique_name_.empty()) {
     // server name not set
     return false;
   }
@@ -110,7 +112,7 @@ bool IpcClient::Connect() {
   wins_fd_ = OpenFileMappingA(
       FILE_MAP_ALL_ACCESS,
       FALSE,
-      server_name_.c_str());
+      unique_name_.c_str());
   if (wins_fd_ == nullptr) {
     // Failed to open file mapping
     return false;
@@ -133,7 +135,7 @@ bool IpcClient::Connect() {
   // Unix-specific connection logic
 
   // open existing shared memory segment
-  int unix_fd_ = shm_open(server_name_.c_str(), O_RDWR, 0666);
+  int unix_fd_ = shm_open(unique_name_.c_str(), O_RDWR, 0666);
   if (unix_fd_ == -1) {
     // Failed to open shared memory
     return false;

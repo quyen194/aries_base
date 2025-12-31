@@ -49,8 +49,8 @@ class IpcClient {
   IpcClient();
   ~IpcClient();
 
-  void SetName(const std::string& name_prefix, bool cross_process = false, uint32_t port_number = 0);
-  void SetNameEx(const std::string& name);
+  void SetName(const std::string& server_name, bool cross_process = false, uint32_t port_number = 0);
+  void SetNameEx(const std::string& unique_name);
 
   bool Connect();
   void Disconnect();
@@ -58,7 +58,10 @@ class IpcClient {
   bool Enqueue(uint16_t msg_id, const void* data = nullptr, size_t length = 0, uint32_t timeout_ms = -1);
 
  private:
+  // user input names
   std::string server_name_;
+  // actual unique name used for IPC
+  std::string unique_name_;
 
 #if defined(_WIN32)
   // Windows-specific members

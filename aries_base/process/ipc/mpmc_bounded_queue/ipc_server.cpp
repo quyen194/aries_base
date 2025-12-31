@@ -63,6 +63,7 @@ using namespace process::utils;
 
 IpcServer::IpcServer()
     : server_name_(""),
+      unique_name_(""),
       ipc_type_(IpcType::kUnknown),
 #if defined(_WIN32)
       wins_fd_(nullptr),
@@ -80,21 +81,22 @@ IpcServer::IpcServer()
 IpcServer::~IpcServer() {}
 // -----------------------------------------------------------------------------
 
-void IpcServer::SetName(const std::string& name_prefix,
+void IpcServer::SetName(const std::string& server_name,
                         bool cross_process,
                         uint32_t port_number) {
+  server_name_ = server_name;
   if (cross_process) {
     // cross-process: "/<name_prefix>_<port_number>"
-    server_name_ = "/_" + name_prefix;
-    server_name_ += "_" + std::to_string(port_number);
+    unique_name_ = "/_" + server_name_;
+    unique_name_ += "_" + std::to_string(port_number);
   }
   else {
     // same-process: "<name_prefix>_<process_id>_<thread_id>"
-    server_name_ = "_" + name_prefix;
+    unique_name_ = "_" + server_name_;
     uint64_t process_id = static_cast<uint64_t>(GetPID());
-    server_name_ += "_" + std::to_string(process_id);
+    unique_name_ += "_" + std::to_string(process_id);
     uint64_t thread_id = static_cast<uint64_t>(std::hash<std::thread::id>{}(std::this_thread::get_id()));
-    server_name_ += "_" + std::to_string(thread_id);
+    unique_name_ += "_" + std::to_string(thread_id);
   }
 }
 // -----------------------------------------------------------------------------
@@ -105,7 +107,7 @@ void IpcServer::SetIpcType(IpcType type) {
 // -----------------------------------------------------------------------------
 
 bool IpcServer::Create(uint32_t block_size, uint32_t block_count) {
-  if (server_name_.empty()) {
+  if (unique_name_.empty()) {
     // server name not set
     return false;
   }
@@ -128,7 +130,7 @@ bool IpcServer::Create(uint32_t block_size, uint32_t block_count) {
       PAGE_READWRITE,
       0,
       map_size_,
-      server_name_.c_str());
+      unique_name_.c_str());
   if (wins_fd_ == nullptr) {
     // Handle error
     return false;
@@ -151,10 +153,10 @@ bool IpcServer::Create(uint32_t block_size, uint32_t block_count) {
   // Unix-specific disconnection logic
 
   // remove existing shared memory segment if any
-  shm_unlink(server_name_.c_str());
+  shm_unlink(unique_name_.c_str());
 
   // create shared memory segment
-  unix_fd_ = shm_open(server_name_.c_str(), O_CREAT | O_RDWR, 0666);
+  unix_fd_ = shm_open(unique_name_.c_str(), O_CREAT | O_RDWR, 0666);
   if (unix_fd_ == -1) {
     // Handle error
     return false;
