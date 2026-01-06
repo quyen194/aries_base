@@ -11,6 +11,7 @@ add_subdirectory(database)
 add_subdirectory(process/event)
 add_subdirectory(process/ipc/mpmc_bounded_queue)
 add_subdirectory(process/thread_pool)
+add_subdirectory(process/utils)
 add_subdirectory(utils)
 
 # Retrieve the list of all example targets
