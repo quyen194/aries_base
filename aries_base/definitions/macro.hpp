@@ -311,21 +311,16 @@
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
-#ifndef _QWORD_DEFINED
-#define _QWORD_DEFINED
-typedef int64_t QWORD, *LPQWORD;
-#endif
+#define LO_WORD(x) ((uint8_t)((uint16_t)(x) & 0xFF))
+#define HI_WORD(x) ((uint8_t)((uint16_t)(x) >> 8) & 0xFF)
+#define LO_DWORD(x) ((uint16_t)((uint32_t)(x) & 0xFFFF))
+#define HI_DWORD(x) ((uint16_t)((uint32_t)(x) >> 16) & 0xFFFF)
+#define LO_QWORD(x) ((uint32_t)((uint64_t)(x) & 0xFFFFFFFF))
+#define HI_QWORD(x) ((uint32_t)((uint64_t)(x) >> 32) & 0xFFFFFFFF)
 
-#define LO_WORD(x) ((BYTE)((WORD)(x) & 0xFF))
-#define HI_WORD(x) ((BYTE)((WORD)(x) >> 8) & 0xFF)
-#define LO_DWORD(x) ((WORD)((DWORD)(x) & 0xFFFF))
-#define HI_DWORD(x) ((WORD)((DWORD)(x) >> 16) & 0xFFFF)
-#define LO_QWORD(x) ((DWORD)((QWORD)(x) & 0xFFFFFFFF))
-#define HI_QWORD(x) ((DWORD)((QWORD)(x) >> 32) & 0xFFFFFFFF)
-
-#define MAKE_WORD(l, h) ((WORD)(((WORD)((l) & 0x00FF)) | ((WORD)((h) & 0x00FF) << 8)))
-#define MAKE_DWORD(l, h) ((DWORD)(((DWORD)((l) & 0x0000FFFF)) | ((DWORD)((h) & 0x0000FFFF) << 16)))
-#define MAKE_QWORD(l, h) ((QWORD)(((QWORD)((l) & 0x00000000FFFFFFFF)) | (((QWORD)((h) & 0x00000000FFFFFFFF)) << 32)))
+#define MAKE_WORD(l, h) ((uint16_t)(((uint16_t)((l) & 0x00FF)) | ((uint16_t)((h) & 0x00FF) << 8)))
+#define MAKE_DWORD(l, h) ((uint32_t)(((uint32_t)((l) & 0x0000FFFF)) | ((uint32_t)((h) & 0x0000FFFF) << 16)))
+#define MAKE_QWORD(l, h) ((uint64_t)(((uint64_t)((l) & 0x00000000FFFFFFFF)) | (((uint64_t)((h) & 0x00000000FFFFFFFF)) << 32)))
 
 #pragma warning(push)
 #pragma warning(disable : 4201)
