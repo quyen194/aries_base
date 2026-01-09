@@ -78,7 +78,7 @@ std::shared_ptr<spdlog::logger> LoggerManager::CreateClassLogger(
 
   auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
   console_sink->set_level(console_level);
-  console_sink->set_pattern("[%H:%M:%S.%e] [%n] [%^%l%$] %v");
+  console_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%^%l%$] %v");
 
   std::string file_name = log_file_name.empty() ? class_name : log_file_name;
   std::string log_file = fmt::format("{}/{}", logs_directory_, file_name);
@@ -107,7 +107,7 @@ std::shared_ptr<spdlog::logger> LoggerManager::CreateLoggerWithSharedFile(
 
   auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
   console_sink->set_level(console_level);
-  console_sink->set_pattern("[%H:%M:%S.%e] [%n] [%^%l%$] %v");
+  console_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%^%l%$] %v");
 
   auto file_sink = GetOrCreateSharedFileSink(shared_file_name, file_level);
 
