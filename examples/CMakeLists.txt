@@ -8,6 +8,7 @@ set_property(GLOBAL PROPERTY ALL_EXAMPLE_TARGETS "")
 
 # Include all example subdirectories
 add_subdirectory(database)
+add_subdirectory(encryption/hash)
 add_subdirectory(process/event)
 add_subdirectory(process/ipc/mpmc_bounded_queue)
 add_subdirectory(process/thread_pool)
