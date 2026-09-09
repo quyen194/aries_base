@@ -75,7 +75,7 @@ uint64_t EpocTimeUs() {
 
 int8_t TimeZone() {
   // 1992/19/04 00:00:00 UTC
-  __time_t utc_time = 703641600UL;
+  time_t utc_time = 703641600UL;
 
   struct tm local_timeinfo = {0};
 #ifdef _WIN32
