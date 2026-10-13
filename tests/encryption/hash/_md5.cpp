@@ -13,6 +13,9 @@
 
 
 // -----------------------------------------------------------------------------
+// Tests must assert in Release builds too (default CMAKE_BUILD_TYPE=Release).
+#undef NDEBUG
+
 #include <cassert>
 #include <iostream>
 #include <string>
@@ -69,7 +72,8 @@ int main() {
   int i = 1;
   for (const auto& [data, display, expected_digest] : tests) {
     std::cout << "Execute testcase " << i++ << std::endl;
-    assert(execute_test_case(hasher, data, display, expected_digest));
+    bool pass = execute_test_case(hasher, data, display, expected_digest);
+    assert(pass);
   }
 
   std::cout << std::endl << "=== All tests passed! ===" << std::endl;
