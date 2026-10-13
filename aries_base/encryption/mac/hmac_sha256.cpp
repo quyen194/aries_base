@@ -17,6 +17,7 @@
 #include <cstring>
 
 #include "aries_base/encryption/mac/hmac_sha256.hpp"
+#include "aries_base/encryption/common/secure_memory.hpp"
 #include "aries_base/encryption/hash/sha256/sha256.hpp"
 // -----------------------------------------------------------------------------
 
@@ -39,17 +40,6 @@ namespace {
 
 constexpr std::uint8_t kIpad = 0x36;
 constexpr std::uint8_t kOpad = 0x5c;
-// -----------------------------------------------------------------------------
-
-// Wipes key material. Writing through a volatile pointer keeps the compiler
-// from removing the stores as dead (a plain memset right before the buffer
-// goes out of scope may be optimized away).
-void SecureZero(void* buf, size_t len) {
-  volatile std::uint8_t* p = static_cast<volatile std::uint8_t*>(buf);
-  while (len--) {
-    *p++ = 0;
-  }
-}
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------

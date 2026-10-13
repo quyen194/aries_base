@@ -11,6 +11,7 @@ set_property(GLOBAL PROPERTY ALL_TEST_TARGETS "")
 
 # Include all test subdirectories
 add_subdirectory(database)
+add_subdirectory(encryption/common)
 add_subdirectory(encryption/hash)
 add_subdirectory(encryption/mac)
 add_subdirectory(encryption/random)
