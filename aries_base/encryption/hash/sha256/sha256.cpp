@@ -15,7 +15,6 @@
 #include <cstring>
 #include <cstdint>
 #include <string>
-#include <cstdio>  // for snprintf
 
 #include "aries_base/encryption/hash/sha256/sha256.hpp"
 // -----------------------------------------------------------------------------
@@ -86,7 +85,8 @@ void SHA256::Reset() {
 
   count_ = 0;
   buf_len_ = 0;
-  digest_.clear();
+  finalized_ = false;
+  raw_.fill(0);
 }
 // -----------------------------------------------------------------------------
 
@@ -128,8 +128,30 @@ void SHA256::Update(const void* data, size_t len) {
 // -----------------------------------------------------------------------------
 
 std::string SHA256::Final() {
-  if (!digest_.empty()) {
-    return digest_;
+  static const char kHex[] = "0123456789abcdef";
+
+  Finalize();
+
+  std::string digest;
+  digest.reserve(kDigestSize * 2);
+  for (std::uint8_t b : raw_) {
+    digest += kHex[b >> 4];
+    digest += kHex[b & 0x0f];
+  }
+
+  return digest;
+}
+// -----------------------------------------------------------------------------
+
+SHA256::RawDigest SHA256::FinalRaw() {
+  Finalize();
+  return raw_;
+}
+// -----------------------------------------------------------------------------
+
+void SHA256::Finalize() {
+  if (finalized_) {
+    return;
   }
 
   std::uint64_t bit_len = count_ * 8;
@@ -157,26 +179,20 @@ std::string SHA256::Final() {
 
   ProcessBlock(buffer_);
 
-  // Convert state to lowercase hex string (big-endian per word)
-  digest_.reserve(64);
+  // Serialize state big-endian per word
   for (int i = 0; i < 8; ++i) {
-    for (int j = 3; j >= 0; --j) {
-      char hex[3];
-      std::snprintf(hex,
-                    sizeof(hex),
-                    "%02x",
-                    static_cast<unsigned int>((state_[i] >> (j * 8)) & 0xff));
-      digest_ += hex;
-    }
+    raw_[i * 4 + 0] = static_cast<std::uint8_t>(state_[i] >> 24);
+    raw_[i * 4 + 1] = static_cast<std::uint8_t>(state_[i] >> 16);
+    raw_[i * 4 + 2] = static_cast<std::uint8_t>(state_[i] >> 8);
+    raw_[i * 4 + 3] = static_cast<std::uint8_t>(state_[i]);
   }
 
-  return digest_;
+  finalized_ = true;
 }
 // -----------------------------------------------------------------------------
 
 size_t SHA256::DigestSize() const {
-  // SHA256 produces a 32-byte digest
-  return 32;
+  return kDigestSize;
 }
 // -----------------------------------------------------------------------------
 
