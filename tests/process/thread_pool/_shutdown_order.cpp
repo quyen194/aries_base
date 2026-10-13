@@ -12,6 +12,9 @@
 *********************************************************************/
 
 // -----------------------------------------------------------------------------
+// Tests must assert in Release builds too (default CMAKE_BUILD_TYPE=Release).
+#undef NDEBUG
+
 #include <atomic>
 #include <cassert>
 #include <chrono>

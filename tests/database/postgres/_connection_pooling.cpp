@@ -13,6 +13,9 @@
 
 
 // -----------------------------------------------------------------------------
+// Tests must assert in Release builds too (default CMAKE_BUILD_TYPE=Release).
+#undef NDEBUG
+
 #ifdef _WIN32
 #include <windows.h>
 #endif  // _WIN32
