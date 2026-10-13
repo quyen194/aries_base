@@ -45,5 +45,10 @@ if(NOT WIN32 AND NOT APPLE)
     target_link_libraries(${PROJECT_NAME} PUBLIC rt)
 endif()
 
+# Link bcrypt for BCryptGenRandom (encryption/random)
+if(WIN32)
+    target_link_libraries(${PROJECT_NAME} PUBLIC bcrypt)
+endif()
+
 # Link spdlog
 target_link_libraries(${PROJECT_NAME} PUBLIC spdlog)
