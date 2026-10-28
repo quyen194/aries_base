@@ -99,120 +99,108 @@ class DatabaseFactory {
 
 #ifdef ARIES_DB_MSSQL
   /**
-   * @brief Convert a generic Database pointer to a MySQLDatabase pointer
-   * @param db Unique pointer to a Database instance
-   * @return Unique pointer to a MySQLDatabase instance
-   * @throws std::runtime_error if the conversion fails
+   * @brief Transfer ownership of a Database to a MSSQLDatabase pointer
+   * @param db Database instance; emptied on success, untouched on failure
+   * @return MSSQLDatabase pointer, or nullptr if db is not a MSSQLDatabase
    */
   static std::unique_ptr<MSSQLDatabase> ToMSSQL(std::unique_ptr<Database>& db);
 #endif  // ARIES_DB_MSSQL
 
 #ifdef ARIES_DB_MYSQL
   /**
-   * @brief Convert a generic Database pointer to a MySQLDatabase pointer
-   * @param db Unique pointer to a Database instance
-   * @return Unique pointer to a MySQLDatabase instance
-   * @throws std::runtime_error if the conversion fails
+   * @brief Transfer ownership of a Database to a MySQLDatabase pointer
+   * @param db Database instance; emptied on success, untouched on failure
+   * @return MySQLDatabase pointer, or nullptr if db is not a MySQLDatabase
    */
   static std::unique_ptr<MySQLDatabase> ToMySQL(std::unique_ptr<Database>& db);
 #endif  // ARIES_DB_MYSQL
 
 #ifdef ARIES_DB_POSTGRES
   /**
-   * @brief Convert a generic Database pointer to a PostgresDatabase pointer
-   * @param db Unique pointer to a Database instance
-   * @return Unique pointer to a PostgresDatabase instance
-   * @throws std::runtime_error if the conversion fails
+   * @brief Transfer ownership of a Database to a PostgresDatabase pointer
+   * @param db Database instance; emptied on success, untouched on failure
+   * @return PostgresDatabase pointer, or nullptr if db is not a PostgresDatabase
    */
   static std::unique_ptr<PostgresDatabase> ToPostgres(std::unique_ptr<Database>& db);
 #endif  // ARIES_DB_POSTGRES
 
 #ifdef ARIES_DB_SQLITE
   /**
-   * @brief Convert a generic Database pointer to a SQLiteDatabase pointer
-   * @param db Unique pointer to a Database instance
-   * @return Unique pointer to a SQLiteDatabase instance
-   * @throws std::runtime_error if the conversion fails
+   * @brief Transfer ownership of a Database to a SQLiteDatabase pointer
+   * @param db Database instance; emptied on success, untouched on failure
+   * @return SQLiteDatabase pointer, or nullptr if db is not a SQLiteDatabase
    */
   static std::unique_ptr<SQLiteDatabase> ToSQLite(std::unique_ptr<Database>& db);
 #endif  // ARIES_DB_SQLITE
 
 #ifdef ARIES_DB_MSSQL
   /**
-   * @brief Convert a generic Statement pointer to a MSSQLStatement pointer
-   * @param stmt Unique pointer to a Statement instance
-   * @return Unique pointer to a MSSQLStatement instance
-   * @throws std::runtime_error if the conversion fails
+   * @brief Transfer ownership of a Statement to a MSSQLStatement pointer
+   * @param stmt Statement instance; emptied on success, untouched on failure
+   * @return MSSQLStatement pointer, or nullptr if stmt is not a MSSQLStatement
    */
   static std::unique_ptr<MSSQLStatement> ToMSSQL(std::unique_ptr<Statement>& stmt);
 #endif  // ARIES_DB_MSSQL
 
 #ifdef ARIES_DB_MYSQL
   /**
-   * @brief Convert a generic Statement pointer to a MySQLStatement pointer
-   * @param stmt Unique pointer to a Statement instance
-   * @return Unique pointer to a MySQLStatement instance
-   * @throws std::runtime_error if the conversion fails
+   * @brief Transfer ownership of a Statement to a MySQLStatement pointer
+   * @param stmt Statement instance; emptied on success, untouched on failure
+   * @return MySQLStatement pointer, or nullptr if stmt is not a MySQLStatement
    */
   static std::unique_ptr<MySQLStatement> ToMySQL(std::unique_ptr<Statement>& stmt);
 #endif  // ARIES_DB_MYSQL
 
 #ifdef ARIES_DB_POSTGRES
   /**
-   * @brief Convert a generic Statement pointer to a PostgresStatement pointer
-   * @param stmt Unique pointer to a Statement instance
-   * @return Unique pointer to a PostgresStatement instance
-   * @throws std::runtime_error if the conversion fails
+   * @brief Transfer ownership of a Statement to a PostgresStatement pointer
+   * @param stmt Statement instance; emptied on success, untouched on failure
+   * @return PostgresStatement pointer, or nullptr if stmt is not a PostgresStatement
    */
   static std::unique_ptr<PostgresStatement> ToPostgres(std::unique_ptr<Statement>& stmt);
 #endif  // ARIES_DB_POSTGRES
 
 #ifdef ARIES_DB_SQLITE
   /**
-   * @brief Convert a generic Statement pointer to a SQLiteStatement pointer
-   * @param stmt Unique pointer to a Statement instance
-   * @return Unique pointer to a SQLiteStatement instance
-   * @throws std::runtime_error if the conversion fails
+   * @brief Transfer ownership of a Statement to a SQLiteStatement pointer
+   * @param stmt Statement instance; emptied on success, untouched on failure
+   * @return SQLiteStatement pointer, or nullptr if stmt is not a SQLiteStatement
    */
   static std::unique_ptr<SQLiteStatement> ToSQLite(std::unique_ptr<Statement>& stmt);
 #endif  // ARIES_DB_SQLITE
 
 #ifdef ARIES_DB_MSSQL
   /**
-   * @brief Convert a generic ResultSets pointer to a MSSQLResult pointer
-   * @param result Unique pointer to a ResultSets instance
-   * @return Unique pointer to a MSSQLResult instance
-   * @throws std::runtime_error if the conversion fails
+   * @brief Transfer ownership of a ResultSets to a MSSQLResult pointer
+   * @param result ResultSets instance; emptied on success, untouched on failure
+   * @return MSSQLResult pointer, or nullptr if result is not a MSSQLResult
    */
   static std::unique_ptr<MSSQLResult> ToMSSQL(std::unique_ptr<ResultSets>& result);
 #endif  // ARIES_DB_MSSQL
 
 #ifdef ARIES_DB_MYSQL
   /**
-   * @brief Convert a generic ResultSets pointer to a MySQLResult pointer
-   * @param result Unique pointer to a ResultSets instance
-   * @return Unique pointer to a MySQLResult instance
-   * @throws std::runtime_error if the conversion fails
+   * @brief Transfer ownership of a ResultSets to a MySQLResult pointer
+   * @param result ResultSets instance; emptied on success, untouched on failure
+   * @return MySQLResult pointer, or nullptr if result is not a MySQLResult
    */
   static std::unique_ptr<MySQLResult> ToMySQL(std::unique_ptr<ResultSets>& result);
 #endif  // ARIES_DB_MYSQL
 
 #ifdef ARIES_DB_POSTGRES
   /**
-   * @brief Convert a generic ResultSets pointer to a PostgresResult pointer
-   * @param result Unique pointer to a ResultSets instance
-   * @return Unique pointer to a PostgresResult instance
-   * @throws std::runtime_error if the conversion fails
+   * @brief Transfer ownership of a ResultSets to a PostgresResult pointer
+   * @param result ResultSets instance; emptied on success, untouched on failure
+   * @return PostgresResult pointer, or nullptr if result is not a PostgresResult
    */
   static std::unique_ptr<PostgresResult> ToPostgres(std::unique_ptr<ResultSets>& result);
 #endif  // ARIES_DB_POSTGRES
 
 #ifdef ARIES_DB_SQLITE
   /**
-   * @brief Convert a generic ResultSets pointer to a SQLiteResult pointer
-   * @param result Unique pointer to a ResultSets instance
-   * @return Unique pointer to a SQLiteResult instance
-   * @throws std::runtime_error if the conversion fails
+   * @brief Transfer ownership of a ResultSets to a SQLiteResult pointer
+   * @param result ResultSets instance; emptied on success, untouched on failure
+   * @return SQLiteResult pointer, or nullptr if result is not a SQLiteResult
    */
   static std::unique_ptr<SQLiteResult> ToSQLite(std::unique_ptr<ResultSets>& result);
 #endif  // ARIES_DB_SQLITE

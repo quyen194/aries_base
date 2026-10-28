@@ -24,6 +24,22 @@
 
 
 // -----------------------------------------------------------------------------
+namespace {
+template <typename To, typename From>
+std::unique_ptr<To> TransferAs(std::unique_ptr<From>& from) {
+  auto* raw = dynamic_cast<To*>(from.get());
+  if (!raw) {
+    // wrong type: db keeps ownership
+    return nullptr;
+  }
+  // ownership moves to the returned pointer
+  from.release();
+  return std::unique_ptr<To>(raw);
+}
+}
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
 namespace aries_base {
 // -----------------------------------------------------------------------------
 
@@ -72,8 +88,7 @@ std::unique_ptr<Database> DatabaseFactory::Create(DBType type) {
 #ifdef ARIES_DB_MSSQL
 std::unique_ptr<MSSQLDatabase> DatabaseFactory::ToMSSQL(
     std::unique_ptr<Database>& db) {
-  return std::unique_ptr<MSSQLDatabase>(
-      dynamic_cast<MSSQLDatabase*>(db.release()));
+  return TransferAs<MSSQLDatabase>(db);
 }
 #endif  // ARIES_DB_MSSQL
 // -----------------------------------------------------------------------------
@@ -81,8 +96,7 @@ std::unique_ptr<MSSQLDatabase> DatabaseFactory::ToMSSQL(
 #ifdef ARIES_DB_MYSQL
 std::unique_ptr<MySQLDatabase> DatabaseFactory::ToMySQL(
     std::unique_ptr<Database>& db) {
-  return std::unique_ptr<MySQLDatabase>(
-      dynamic_cast<MySQLDatabase*>(db.release()));
+  return TransferAs<MySQLDatabase>(db);
 }
 #endif  // ARIES_DB_MYSQL
 // -----------------------------------------------------------------------------
@@ -90,8 +104,7 @@ std::unique_ptr<MySQLDatabase> DatabaseFactory::ToMySQL(
 #ifdef ARIES_DB_POSTGRES
 std::unique_ptr<PostgresDatabase> DatabaseFactory::ToPostgres(
     std::unique_ptr<Database>& db) {
-  return std::unique_ptr<PostgresDatabase>(
-      dynamic_cast<PostgresDatabase*>(db.release()));
+  return TransferAs<PostgresDatabase>(db);
 }
 #endif  // ARIES_DB_POSTGRES
 // -----------------------------------------------------------------------------
@@ -99,8 +112,7 @@ std::unique_ptr<PostgresDatabase> DatabaseFactory::ToPostgres(
 #ifdef ARIES_DB_SQLITE
 std::unique_ptr<SQLiteDatabase> DatabaseFactory::ToSQLite(
     std::unique_ptr<Database>& db) {
-  return std::unique_ptr<SQLiteDatabase>(
-      dynamic_cast<SQLiteDatabase*>(db.release()));
+  return TransferAs<SQLiteDatabase>(db);
 }
 #endif  // ARIES_DB_SQLITE
 // -----------------------------------------------------------------------------
@@ -108,8 +120,7 @@ std::unique_ptr<SQLiteDatabase> DatabaseFactory::ToSQLite(
 #ifdef ARIES_DB_MSSQL
 std::unique_ptr<MSSQLStatement> DatabaseFactory::ToMSSQL(
     std::unique_ptr<Statement>& stmt) {
-  return std::unique_ptr<MSSQLStatement>(
-      dynamic_cast<MSSQLStatement*>(stmt.release()));
+  return TransferAs<MSSQLStatement>(stmt);
 }
 #endif  // ARIES_DB_MSSQL
 // -----------------------------------------------------------------------------
@@ -117,8 +128,7 @@ std::unique_ptr<MSSQLStatement> DatabaseFactory::ToMSSQL(
 #ifdef ARIES_DB_MYSQL
 std::unique_ptr<MySQLStatement> DatabaseFactory::ToMySQL(
     std::unique_ptr<Statement>& stmt) {
-  return std::unique_ptr<MySQLStatement>(
-      dynamic_cast<MySQLStatement*>(stmt.release()));
+  return TransferAs<MySQLStatement>(stmt);
 }
 #endif  // ARIES_DB_MYSQL
 // -----------------------------------------------------------------------------
@@ -126,8 +136,7 @@ std::unique_ptr<MySQLStatement> DatabaseFactory::ToMySQL(
 #ifdef ARIES_DB_POSTGRES
 std::unique_ptr<PostgresStatement> DatabaseFactory::ToPostgres(
     std::unique_ptr<Statement>& stmt) {
-  return std::unique_ptr<PostgresStatement>(
-      dynamic_cast<PostgresStatement*>(stmt.release()));
+  return TransferAs<PostgresStatement>(stmt);
 }
 #endif  // ARIES_DB_POSTGRES
 // -----------------------------------------------------------------------------
@@ -135,8 +144,7 @@ std::unique_ptr<PostgresStatement> DatabaseFactory::ToPostgres(
 #ifdef ARIES_DB_SQLITE
 std::unique_ptr<SQLiteStatement> DatabaseFactory::ToSQLite(
     std::unique_ptr<Statement>& stmt) {
-  return std::unique_ptr<SQLiteStatement>(
-      dynamic_cast<SQLiteStatement*>(stmt.release()));
+  return TransferAs<SQLiteStatement>(stmt);
 }
 #endif  // ARIES_DB_SQLITE
 // -----------------------------------------------------------------------------
@@ -144,8 +152,7 @@ std::unique_ptr<SQLiteStatement> DatabaseFactory::ToSQLite(
 #ifdef ARIES_DB_MSSQL
 std::unique_ptr<MSSQLResult> DatabaseFactory::ToMSSQL(
     std::unique_ptr<ResultSets>& result) {
-  return std::unique_ptr<MSSQLResult>(
-      dynamic_cast<MSSQLResult*>(result.release()));
+  return TransferAs<MSSQLResult>(result);
 }
 #endif  // ARIES_DB_MSSQL
 // -----------------------------------------------------------------------------
@@ -153,8 +160,7 @@ std::unique_ptr<MSSQLResult> DatabaseFactory::ToMSSQL(
 #ifdef ARIES_DB_MYSQL
 std::unique_ptr<MySQLResult> DatabaseFactory::ToMySQL(
     std::unique_ptr<ResultSets>& result) {
-  return std::unique_ptr<MySQLResult>(
-      dynamic_cast<MySQLResult*>(result.release()));
+  return TransferAs<MySQLResult>(result);
 }
 #endif  // ARIES_DB_MYSQL
 // -----------------------------------------------------------------------------
@@ -162,8 +168,7 @@ std::unique_ptr<MySQLResult> DatabaseFactory::ToMySQL(
 #ifdef ARIES_DB_POSTGRES
 std::unique_ptr<PostgresResult> DatabaseFactory::ToPostgres(
     std::unique_ptr<ResultSets>& result) {
-  return std::unique_ptr<PostgresResult>(
-      dynamic_cast<PostgresResult*>(result.release()));
+  return TransferAs<PostgresResult>(result);
 }
 #endif  // ARIES_DB_POSTGRES
 // -----------------------------------------------------------------------------
@@ -171,8 +176,7 @@ std::unique_ptr<PostgresResult> DatabaseFactory::ToPostgres(
 #ifdef ARIES_DB_SQLITE
 std::unique_ptr<SQLiteResult> DatabaseFactory::ToSQLite(
     std::unique_ptr<ResultSets>& result) {
-  return std::unique_ptr<SQLiteResult>(
-      dynamic_cast<SQLiteResult*>(result.release()));
+  return TransferAs<SQLiteResult>(result);
 }
 #endif  // ARIES_DB_SQLITE
 // -----------------------------------------------------------------------------
