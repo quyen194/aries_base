@@ -118,6 +118,48 @@ void test_column_type_retrieval() {
 }
 // -----------------------------------------------------------------------------
 
+void test_client_encoding() {
+  try {
+    auto db = DatabaseFactory::Create(DB_TYPE);
+    assert(db->Connect(POSTGRES_CONNECTION_STRING));
+
+    // Connect must leave the session in UTF8
+    auto result = db->Execute("SHOW client_encoding");
+    assert(result != nullptr);
+    assert(result->Next());
+    assert(result->GetString(0) == "UTF8");
+
+    // "Việt" as raw UTF-8 bytes: 4 characters, 6 bytes
+    const std::string text = "Vi\xE1\xBB\x87t";
+
+    assert(db->Execute("DROP TABLE IF EXISTS encoding_test") != nullptr);
+    assert(db->Execute("CREATE TABLE encoding_test (name TEXT)") != nullptr);
+
+    // statement must be destroyed before Disconnect (it holds the raw PGconn*)
+    {
+      auto stmt = db->Prepare("INSERT INTO encoding_test VALUES (?)");
+      assert(stmt != nullptr);
+      stmt->BindString(1, text);
+      assert(stmt->Execute());
+    }
+
+    result = db->Execute(
+        "SELECT name, length(name), octet_length(name) FROM encoding_test");
+    assert(result != nullptr);
+    assert(result->Next());
+    assert(result->GetString(0) == text);
+    assert(result->GetInt(1) == 4);
+    assert(result->GetInt(2) == 6);
+
+    db->Disconnect();
+    std::cout << "✓ Client encoding test passed\n";
+  } catch (const std::exception& e) {
+    std::cerr << "✗ Client encoding test failed: " << e.what() << "\n";
+    assert(false);
+  }
+}
+// -----------------------------------------------------------------------------
+
 int main() {
   std::cout << "=== Database Basic Tests ===\n\n";
 
@@ -125,6 +167,7 @@ int main() {
   test_sql_connection();
   test_query_execution();
   test_column_type_retrieval();
+  test_client_encoding();
 
   std::cout << "\n=== All tests passed! ===\n";
   return 0;
