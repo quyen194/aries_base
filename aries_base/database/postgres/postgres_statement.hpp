@@ -69,13 +69,18 @@ class PostgresStatement : public Statement {
   std::string ConvertPlaceholders(const std::string& sql);
 
  private:
+  struct BindData {
+    bool is_null = true;
+    std::string value;
+    int format = 0;
+  };
+
+ private:
   PGconn* conn_;
   std::string sql_;
   std::string stmt_name_;
   std::string last_error_;
-  std::vector<std::string> param_values_;
-  std::vector<int> param_lengths_;
-  std::vector<int> param_formats_;
+  std::vector<BindData> params_;
   int param_count_;
   bool prepared_;
 };

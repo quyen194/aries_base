@@ -86,9 +86,7 @@ std::string PostgresStatement::ConvertPlaceholders(const std::string& sql) {
   }
 
   param_count_ = paramNum - 1;
-  param_values_.resize(param_count_);
-  param_lengths_.resize(param_count_);
-  param_formats_.resize(param_count_, 0); // 0 = text format
+  params_.resize(param_count_);
 
   return result;
 }
@@ -98,7 +96,9 @@ void PostgresStatement::BindInt(int index, int value) {
   if (index < 1 || index > param_count_) {
     return;
   }
-  param_values_[index - 1] = std::to_string(value);
+  params_[index - 1].is_null = false;
+  params_[index - 1].value = std::to_string(value);
+  params_[index - 1].format = 0;
 }
 // -----------------------------------------------------------------------------
 
@@ -106,7 +106,9 @@ void PostgresStatement::BindInt64(int index, int64_t value) {
   if (index < 1 || index > param_count_) {
     return;
   }
-  param_values_[index - 1] = std::to_string(value);
+  params_[index - 1].is_null = false;
+  params_[index - 1].value = std::to_string(value);
+  params_[index - 1].format = 0;
 }
 // -----------------------------------------------------------------------------
 
@@ -114,7 +116,9 @@ void PostgresStatement::BindDouble(int index, double value) {
   if (index < 1 || index > param_count_) {
     return;
   }
-  param_values_[index - 1] = std::to_string(value);
+  params_[index - 1].is_null = false;
+  params_[index - 1].value = std::to_string(value);
+  params_[index - 1].format = 0;
 }
 // -----------------------------------------------------------------------------
 
@@ -122,7 +126,9 @@ void PostgresStatement::BindString(int index, const std::string& value) {
   if (index < 1 || index > param_count_) {
     return;
   }
-  param_values_[index - 1] = value;
+  params_[index - 1].is_null = false;
+  params_[index - 1].value = value;
+  params_[index - 1].format = 0;
 }
 // -----------------------------------------------------------------------------
 
@@ -130,8 +136,7 @@ void PostgresStatement::BindNull(int index) {
   if (index < 1 || index > param_count_) {
     return;
   }
-  param_values_[index - 1] = "";
-  // Mark as NULL by setting length to 0 and using nullptr in execute
+  params_[index - 1].is_null = true;
 }
 // -----------------------------------------------------------------------------
 
@@ -139,22 +144,26 @@ void PostgresStatement::BindBlob(int index, const void* data, size_t size) {
   if (index < 1 || index > param_count_) {
     return;
   }
-  param_values_[index - 1] = std::string(static_cast<const char*>(data), size);
-  param_formats_[index - 1] = 1; // Binary format
+  params_[index - 1].is_null = false;
+  params_[index - 1].value = std::string(static_cast<const char*>(data), size);
+  params_[index - 1].format = 1; // Binary format
 }
 // -----------------------------------------------------------------------------
 
 bool PostgresStatement::Execute() {
   std::vector<const char*> paramPointers(param_count_);
   std::vector<int> paramLengths(param_count_);
+  std::vector<int> paramFormats(param_count_);
 
   for (int i = 0; i < param_count_; ++i) {
-    if (!param_values_[i].empty()) {
-      paramPointers[i] = param_values_[i].c_str();
-      paramLengths[i] = param_values_[i].length();
+    if (!params_[i].is_null) {
+      paramPointers[i] = params_[i].value.c_str();
+      paramLengths[i] = params_[i].value.length();
+      paramFormats[i] = params_[i].format;
     } else {
       paramPointers[i] = nullptr;
       paramLengths[i] = 0;
+      paramFormats[i] = 0;
     }
   }
 
@@ -163,7 +172,7 @@ bool PostgresStatement::Execute() {
                                     param_count_,
                                     paramPointers.data(),
                                     paramLengths.data(),
-                                    param_formats_.data(),
+                                    paramFormats.data(),
                                     0);
 
   if (!result || (PQresultStatus(result) != PGRES_COMMAND_OK &&
@@ -184,14 +193,17 @@ bool PostgresStatement::Execute() {
 std::unique_ptr<ResultSets> PostgresStatement::Query() {
   std::vector<const char*> paramPointers(param_count_);
   std::vector<int> paramLengths(param_count_);
+  std::vector<int> paramFormats(param_count_);
 
   for (int i = 0; i < param_count_; ++i) {
-    if (!param_values_[i].empty()) {
-      paramPointers[i] = param_values_[i].c_str();
-      paramLengths[i] = param_values_[i].length();
+    if (!params_[i].is_null) {
+      paramPointers[i] = params_[i].value.c_str();
+      paramLengths[i] = params_[i].value.length();
+      paramFormats[i] = params_[i].format;
     } else {
       paramPointers[i] = nullptr;
       paramLengths[i] = 0;
+      paramFormats[i] = 0;
     }
   }
 
@@ -200,7 +212,7 @@ std::unique_ptr<ResultSets> PostgresStatement::Query() {
                                     param_count_,
                                     paramPointers.data(),
                                     paramLengths.data(),
-                                    param_formats_.data(),
+                                    paramFormats.data(),
                                     0);
 
   if (!result || PQresultStatus(result) != PGRES_TUPLES_OK) {
@@ -217,11 +229,10 @@ std::unique_ptr<ResultSets> PostgresStatement::Query() {
 // -----------------------------------------------------------------------------
 
 void PostgresStatement::Reset() {
-  for (auto& param : param_values_) {
-    param.clear();
-  }
-  for (auto& format : param_formats_) {
-    format = 0;
+  for (auto& param : params_) {
+    param.is_null = true;
+    param.value.clear();
+    param.format = 0;
   }
   last_error_.clear();
 }
