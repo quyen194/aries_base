@@ -79,7 +79,13 @@ bool PostgresDatabase::Connect(const std::string& connectionString) {
   }
 
   // Set client encoding to UTF8
-  PQexec(conn_, "SET CLIENT_ENCODING TO 'UTF8'");
+  if (PQsetClientEncoding(conn_, "UTF8") != 0) {
+    last_error_ = PQerrorMessage(conn_);
+    PQfinish(conn_);
+    conn_ = nullptr;
+    connected_ = false;
+    return false;
+  }
 
   connected_ = true;
   last_error_.clear();
