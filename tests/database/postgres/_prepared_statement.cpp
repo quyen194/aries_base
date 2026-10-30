@@ -144,6 +144,199 @@ void test_batch_insert() {
 }
 // -----------------------------------------------------------------------------
 
+void test_bind_empty_string() {
+  try {
+    auto db = DatabaseFactory::Create(DB_TYPE);
+    assert(db->Connect(POSTGRES_CONNECTION_STRING));
+
+    assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
+
+    assert(db->Execute("CREATE TABLE test (id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY, value TEXT NOT NULL)") != nullptr);
+
+    // empty string must be sent as '' (not NULL), like SQLite
+    auto stmt = db->Prepare("INSERT INTO test (value) VALUES (?)");
+    assert(stmt != nullptr);
+    stmt->BindString(1, "");
+    assert(stmt->Execute());
+    stmt->Close();
+
+    auto result = db->Execute("SELECT value FROM test WHERE id = 1");
+    assert(result != nullptr);
+    assert(result->Next());
+    assert(!result->IsNull(0));
+    assert(result->GetString(0).empty());
+
+    db->Disconnect();
+    std::cout << "✓ Bind empty string test passed\n";
+  } catch (const std::exception& e) {
+    std::cerr << "✗ Bind empty string test failed: " << e.what() << "\n";
+    assert(false);
+  }
+}
+// -----------------------------------------------------------------------------
+
+void test_bind_null() {
+  try {
+    auto db = DatabaseFactory::Create(DB_TYPE);
+    assert(db->Connect(POSTGRES_CONNECTION_STRING));
+
+    assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
+
+    assert(db->Execute("CREATE TABLE test (id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY, value TEXT)") != nullptr);
+
+    auto stmt = db->Prepare("INSERT INTO test (value) VALUES (?)");
+    assert(stmt != nullptr);
+    stmt->BindNull(1);
+    assert(stmt->Execute());
+    stmt->Close();
+
+    auto result = db->Execute("SELECT value FROM test WHERE id = 1");
+    assert(result != nullptr);
+    assert(result->Next());
+    assert(result->IsNull(0));
+
+    db->Disconnect();
+    std::cout << "✓ Bind null test passed\n";
+  } catch (const std::exception& e) {
+    std::cerr << "✗ Bind null test failed: " << e.what() << "\n";
+    assert(false);
+  }
+}
+// -----------------------------------------------------------------------------
+
+void test_bind_unbound_is_null() {
+  try {
+    auto db = DatabaseFactory::Create(DB_TYPE);
+    assert(db->Connect(POSTGRES_CONNECTION_STRING));
+
+    assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
+
+    assert(db->Execute("CREATE TABLE test (id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY, value TEXT)") != nullptr);
+
+    // a parameter that was never bound is NULL, like SQLite
+    auto stmt = db->Prepare("INSERT INTO test (value) VALUES (?)");
+    assert(stmt != nullptr);
+    assert(stmt->Execute());
+    stmt->Close();
+
+    auto result = db->Execute("SELECT value FROM test WHERE id = 1");
+    assert(result != nullptr);
+    assert(result->Next());
+    assert(result->IsNull(0));
+
+    db->Disconnect();
+    std::cout << "✓ Bind unbound is null test passed\n";
+  } catch (const std::exception& e) {
+    std::cerr << "✗ Bind unbound is null test failed: " << e.what() << "\n";
+    assert(false);
+  }
+}
+// -----------------------------------------------------------------------------
+
+void test_rebind_after_null() {
+  try {
+    auto db = DatabaseFactory::Create(DB_TYPE);
+    assert(db->Connect(POSTGRES_CONNECTION_STRING));
+
+    assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
+
+    assert(db->Execute("CREATE TABLE test (id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY, value TEXT)") != nullptr);
+
+    // a later bind on the same index (without Reset) replaces the NULL
+    auto stmt = db->Prepare("INSERT INTO test (value) VALUES (?)");
+    assert(stmt != nullptr);
+    stmt->BindNull(1);
+    stmt->BindString(1, "TestData");
+    assert(stmt->Execute());
+    stmt->Close();
+
+    auto result = db->Execute("SELECT value FROM test WHERE id = 1");
+    assert(result != nullptr);
+    assert(result->Next());
+    assert(!result->IsNull(0));
+    assert(result->GetString(0) == "TestData");
+
+    db->Disconnect();
+    std::cout << "✓ Rebind after null test passed\n";
+  } catch (const std::exception& e) {
+    std::cerr << "✗ Rebind after null test failed: " << e.what() << "\n";
+    assert(false);
+  }
+}
+// -----------------------------------------------------------------------------
+
+void test_rebind_after_blob() {
+  try {
+    auto db = DatabaseFactory::Create(DB_TYPE);
+    assert(db->Connect(POSTGRES_CONNECTION_STRING));
+
+    assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
+
+    assert(db->Execute("CREATE TABLE test (id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY, value INTEGER)") != nullptr);
+
+    // a later text bind on the same index (without Reset) must not keep the
+    // binary format of the blob ("42" is not a valid binary int4)
+    auto stmt = db->Prepare("INSERT INTO test (value) VALUES (?)");
+    assert(stmt != nullptr);
+    const unsigned char blob[] = {0x00, 0x00, 0x00, 0x07};
+    stmt->BindBlob(1, blob, sizeof(blob));
+    stmt->BindInt(1, 42);
+    assert(stmt->Execute());
+    stmt->Close();
+
+    auto result = db->Execute("SELECT value FROM test WHERE id = 1");
+    assert(result != nullptr);
+    assert(result->Next());
+    assert(result->GetInt(0) == 42);
+
+    db->Disconnect();
+    std::cout << "✓ Rebind after blob test passed\n";
+  } catch (const std::exception& e) {
+    std::cerr << "✗ Rebind after blob test failed: " << e.what() << "\n";
+    assert(false);
+  }
+}
+// -----------------------------------------------------------------------------
+
+void test_reset_clears_null() {
+  try {
+    auto db = DatabaseFactory::Create(DB_TYPE);
+    assert(db->Connect(POSTGRES_CONNECTION_STRING));
+
+    assert(db->Execute("DROP TABLE IF EXISTS test") != nullptr);
+
+    assert(db->Execute("CREATE TABLE test (id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY, value TEXT)") != nullptr);
+
+    auto stmt = db->Prepare("INSERT INTO test (value) VALUES (?)");
+    assert(stmt != nullptr);
+
+    stmt->BindNull(1);
+    assert(stmt->Execute());
+
+    stmt->Reset();
+    stmt->BindString(1, "");
+    assert(stmt->Execute());
+
+    stmt->Close();
+
+    auto result = db->Execute("SELECT value FROM test ORDER BY id");
+    assert(result != nullptr);
+    assert(result->Next());
+    assert(result->IsNull(0));
+    assert(result->Next());
+    assert(!result->IsNull(0));
+    assert(result->GetString(0).empty());
+    assert(!result->Next());
+
+    db->Disconnect();
+    std::cout << "✓ Reset clears null test passed\n";
+  } catch (const std::exception& e) {
+    std::cerr << "✗ Reset clears null test failed: " << e.what() << "\n";
+    assert(false);
+  }
+}
+// -----------------------------------------------------------------------------
+
 int main() {
   std::cout << "=== Database Prepared Statement Tests ===\n\n";
 
@@ -151,6 +344,12 @@ int main() {
   test_bind_integer();
   test_bind_string();
   test_batch_insert();
+  test_bind_empty_string();
+  test_bind_null();
+  test_bind_unbound_is_null();
+  test_rebind_after_null();
+  test_rebind_after_blob();
+  test_reset_clears_null();
 
   std::cout << "\n=== All tests passed! ===\n";
   return 0;
