@@ -61,6 +61,11 @@ class Database {
 
   /**
    * @brief Disconnect from the database
+   * @note Destroy every Statement and ResultSets obtained from this
+   *       connection before calling Disconnect (or before the Database is
+   *       destroyed). They keep the raw native handle and release it in their
+   *       destructors: on PostgreSQL/MySQL/MSSQL that is a use-after-free, on
+   *       SQLite the connection fails to close (SQLITE_BUSY) and leaks.
    */
   virtual void Disconnect() = 0;
 
