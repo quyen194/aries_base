@@ -15,6 +15,7 @@
 // -----------------------------------------------------------------------------
 #include <filesystem>
 
+#include "aries_base/logger/internal/js_console_sink.hpp"
 #include "aries_base/logger/logger_manager.hpp"
 // -----------------------------------------------------------------------------
 
@@ -65,6 +66,25 @@ LoggerManager* LoggerManager::Instance() {
     CreateInstance(DEFAULT_LOGS_DIRECTORY);
   }
   return instance_;
+}
+// -----------------------------------------------------------------------------
+
+std::shared_ptr<spdlog::logger> LoggerManager::CreateConsoleLogger(
+    const std::string& class_name, spdlog::level::level_enum console_level) {
+#ifdef __EMSCRIPTEN__
+  auto console_sink = std::make_shared<js_console_sink_mt>();
+#else
+  auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+#endif // __EMSCRIPTEN__
+  console_sink->set_level(console_level);
+  console_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%^%l%$] %v");
+
+  std::vector<spdlog::sink_ptr> sinks{console_sink};
+  auto logger = std::make_shared<spdlog::logger>(class_name, sinks.begin(), sinks.end());
+  logger->set_level(spdlog::level::trace);
+
+  spdlog::register_logger(logger);
+  return logger;
 }
 // -----------------------------------------------------------------------------
 

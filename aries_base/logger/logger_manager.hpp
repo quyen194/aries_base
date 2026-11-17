@@ -61,6 +61,12 @@ class LoggerManager {
   static void DestroyInstance();
   static LoggerManager* Instance();
 
+  // Create console-only logger for individual class (no file sink).
+  // On Emscripten, output goes to the browser's JavaScript console.
+  std::shared_ptr<spdlog::logger> CreateConsoleLogger(
+      const std::string& class_name,
+      spdlog::level::level_enum console_level = spdlog::level::info);
+
   // Create logger for individual class with its own file
   std::shared_ptr<spdlog::logger> CreateClassLogger(
       const std::string& class_name,
