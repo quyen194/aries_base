@@ -328,6 +328,9 @@ int64_t ToMiliseconds(int64_t duration, TimeUnit unit) {
     case TimeUnit::kWeeks:
       duration *= WEEKS(1);
       break;
+
+    default:
+      break;
   }
 
   return duration;
@@ -352,6 +355,9 @@ int64_t FromMiliseconds(int64_t duration, TimeUnit unit) {
       break;
     case TimeUnit::kWeeks:
       duration /= WEEKS(1);
+      break;
+
+    default:
       break;
   }
 
