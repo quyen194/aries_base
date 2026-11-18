@@ -14,6 +14,8 @@
 
 // -----------------------------------------------------------------------------
 #include <map>
+#include <stdarg.h>
+#include <stdio.h>
 
 #include "aries_base/utils/get_default.hpp"
 #include "aries_base/utils/strings.hpp"
@@ -123,10 +125,22 @@ std::string ToString(const wchar_t* s) {
 std::string string_format(const char* format, ...) {
   va_list args;
   va_start(args, format);
-  size_t len = _vscprintf(format, args);
-  bytes buff(len + 1);
-  char* output = reinterpret_cast<char*>(&buff[0]);
-  vsprintf_s(output, len + 1, format, args);
+
+  // Pass 1: measure. vsnprintf consumes the va_list, so measure on a copy.
+  va_list args_copy;
+  va_copy(args_copy, args);
+  int len = vsnprintf(nullptr, 0, format, args_copy);
+  va_end(args_copy);
+
+  if (len < 0) {
+    va_end(args);
+    return std::string();
+  }
+
+  // Pass 2: write. Since C++11 std::string storage is contiguous and always
+  // has room for the trailing '\0' at data()[size()].
+  std::string output(static_cast<size_t>(len), '\0');
+  vsnprintf(&output[0], output.size() + 1, format, args);
   va_end(args);
   return output;
 }
@@ -212,10 +226,27 @@ std::wstring ToWString(const char* s) {
 std::wstring string_format(const wchar_t* format, ...) {
   va_list args;
   va_start(args, format);
-  size_t len = _vscwprintf(format, args);
-  bytes buff((len + 1) * sizeof(wchar_t));
-  wchar_t* output = reinterpret_cast<wchar_t*>(&buff[0]);
-  vswprintf_s(output, len + 1, format, args);
+
+  // Unlike vsnprintf, vswprintf(nullptr, 0, ...) does NOT report the required
+  // length - it returns -1 when the buffer is too small (and also on encoding
+  // errors). So grow the buffer until the output fits, with an upper bound.
+  constexpr size_t kInitialSize = 256;
+  constexpr size_t kMaxSize = 1 << 20;  // 1M wchar_t: give up beyond this
+
+  std::wstring output;
+  for (size_t size = kInitialSize; size <= kMaxSize; size *= 2) {
+    std::vector<wchar_t> buff(size);
+    va_list args_copy;
+    va_copy(args_copy, args);
+    int len = vswprintf(buff.data(), buff.size(), format, args_copy);
+    va_end(args_copy);
+
+    if (len >= 0) {
+      output.assign(buff.data(), static_cast<size_t>(len));
+      break;
+    }
+  }
+
   va_end(args);
   return output;
 }
